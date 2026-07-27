@@ -18,6 +18,9 @@ RUN cd /app/backend && pip install --no-cache-dir -r requirements.txt
 
 # Копируем конфиг nginx и скрипты запуска
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Удаляем стандартный дефолтный конфиг, чтобы избежать конфликта
+RUN rm -f /etc/nginx/sites-enabled/default
+
 COPY build.sh start.sh /app/
 RUN chmod +x /app/build.sh /app/start.sh
 
@@ -62,6 +65,9 @@ COPY --from=backend /usr/local/bin /usr/local/bin
 
 # Копируем конфиг nginx и скрипты
 COPY --from=backend /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf
+# Снова удаляем стандартный конфиг (на случай, если он появился в финальном образе)
+RUN rm -f /etc/nginx/sites-enabled/default
+
 COPY --from=backend /app/build.sh /app/start.sh /app/
 RUN chmod +x /app/build.sh /app/start.sh
 
