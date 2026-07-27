@@ -9,7 +9,19 @@ from contextlib import asynccontextmanager
 from app.config import settings
 from app.database import engine
 from app.redis_client import redis_client
-from app.api import auth, moods, calendars, reactions, payments, stats, support, admin, notifications
+
+# Импортируем роутеры из __init__.py
+from app.api import (
+    auth_router,
+    moods_router,
+    calendars_router,
+    reactions_router,
+    payments_router,
+    stats_router,
+    support_router,
+    admin_router,
+    notifications_router,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -33,7 +45,7 @@ app = FastAPI(
     description="API for global and private mood calendars",
     version="1.0.0",
     lifespan=lifespan,
-    redirect_slashes=False,  # <-- ГЛОБАЛЬНОЕ ОТКЛЮЧЕНИЕ РЕДИРЕКТОВ
+    redirect_slashes=False,  # Глобальное отключение редиректов
 )
 
 # CORS
@@ -74,15 +86,15 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 # ---- Роутер с префиксом /api ----
 api_router = APIRouter(prefix="/api")
-api_router.include_router(auth.router)
-api_router.include_router(moods.router)
-api_router.include_router(calendars.router)
-api_router.include_router(reactions.router)
-api_router.include_router(payments.router)
-api_router.include_router(stats.router)
-api_router.include_router(support.router)
-api_router.include_router(admin.router)
-api_router.include_router(notifications.router)
+api_router.include_router(auth_router)
+api_router.include_router(moods_router)
+api_router.include_router(calendars_router)
+api_router.include_router(reactions_router)
+api_router.include_router(payments_router)
+api_router.include_router(stats_router)
+api_router.include_router(support_router)
+api_router.include_router(admin_router)
+api_router.include_router(notifications_router)
 app.include_router(api_router)
 
 # ---- Корневые эндпоинты (без префикса) ----
