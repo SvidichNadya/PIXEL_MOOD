@@ -32,9 +32,11 @@ ENV VITE_API_BASE=$VITE_API_BASE
 
 WORKDIR /app/frontend
 
-# Копируем package.json и устанавливаем зависимости
+# Копируем package.json (и package-lock.json, если есть)
 COPY frontend/package*.json ./
-RUN npm ci
+
+# Устанавливаем зависимости (npm install создаст lock-файл, если его нет)
+RUN npm install
 
 # Копируем исходники и собираем
 COPY frontend/ .
