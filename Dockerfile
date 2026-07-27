@@ -1,37 +1,72 @@
-# Используем официальный образ Python
-FROM python:3.11-slim
+# =============================================
+# ЭТАП 1: Бекенд (Python + зависимости)
+# =============================================
+FROM python:3.11-slim AS backend
 
-# Устанавливаем системные зависимости (включая postgresql-client для pg_isready)
+# Устанавливаем системные пакеты (nginx, postgresql-client)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     postgresql-client \
     nginx \
     && rm -rf /var/lib/apt/lists/*
 
-# Устанавливаем рабочую директорию
 WORKDIR /app
 
-# Копируем backend и frontend
+# Копируем backend и устанавливаем Python-зависимости
 COPY backend/ /app/backend/
-COPY frontend/ /app/frontend/
+RUN cd /app/backend && pip install --no-cache-dir -r requirements.txt
 
-# Копируем конфиг nginx
+# Копируем конфиг nginx и скрипты запуска
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Копируем скрипты запуска
 COPY build.sh start.sh /app/
 RUN chmod +x /app/build.sh /app/start.sh
 
-# Устанавливаем Python-зависимости (build-стадия)
-RUN cd /app/backend && pip install --no-cache-dir -r requirements.txt
+# =============================================
+# ЭТАП 2: Сборка фронтенда (Node.js)
+# =============================================
+FROM node:18-alpine AS frontend-builder
 
-# Собираем фронтенд (если нужно, но предположим, что он уже собран)
-# Если фронтенд собирается отдельно, то просто копируем сборку
-# Для примера скопируем готовую сборку из папки frontend/dist
-COPY frontend/dist /usr/share/nginx/html
+# Передаём переменную для Vite (можно переопределить при сборке)
+ARG VITE_API_BASE=/api
+ENV VITE_API_BASE=$VITE_API_BASE
 
-# Открываем порт 8000 для бекенда (nginx слушает 80)
+WORKDIR /app/frontend
+
+# Копируем package.json и устанавливаем зависимости
+COPY frontend/package*.json ./
+RUN npm ci
+
+# Копируем исходники и собираем
+COPY frontend/ .
+RUN npm run build
+
+# =============================================
+# ЭТАП 3: Финальный образ (только нужные артефакты)
+# =============================================
+FROM python:3.11-slim
+
+# Устанавливаем nginx и postgresql-client (для pg_isready)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    nginx \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Копируем бекенд из первого этапа
+COPY --from=backend /app/backend /app/backend
+COPY --from=backend /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=backend /usr/local/bin /usr/local/bin
+
+# Копируем конфиг nginx и скрипты
+COPY --from=backend /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf
+COPY --from=backend /app/build.sh /app/start.sh /app/
+RUN chmod +x /app/build.sh /app/start.sh
+
+# Копируем собранный фронтенд из второго этапа
+COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
+
+# Открываем порты
 EXPOSE 8000 80
 
-# Запускаем start.sh
 CMD ["/app/start.sh"]
