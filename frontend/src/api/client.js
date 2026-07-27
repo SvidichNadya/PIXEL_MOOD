@@ -9,6 +9,8 @@ const client = axios.create({
     'Content-Type': 'application/json',
   },
   timeout: 30000,
+  // Явно разрешаем следовать редиректам
+  maxRedirects: 5,
 });
 
 // Перехватчик запросов: добавляем JWT-токен из localStorage
@@ -28,14 +30,12 @@ client.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
       !originalRequest.url?.includes('/auth/refresh')
     ) {
       originalRequest._retry = true;
-
       const refreshToken = localStorage.getItem('refresh_token');
       if (refreshToken) {
         try {
@@ -60,7 +60,6 @@ client.interceptors.response.use(
         window.location.href = '/login';
       }
     }
-
     return Promise.reject(error);
   }
 );

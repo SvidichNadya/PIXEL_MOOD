@@ -10,7 +10,6 @@ from app.models.user import User
 from app.models.notification import Notification
 from app.schemas.notification import NotificationOut
 
-# Убираем redirect_slashes=False
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
 @router.get("/", response_model=List[NotificationOut])
@@ -27,6 +26,17 @@ async def get_notifications(
     stmt = stmt.order_by(Notification.created_at.desc()).limit(limit).offset(offset)
     result = await db.execute(stmt)
     return result.scalars().all()
+
+# Дублируем GET без слеша
+@router.get("", response_model=List[NotificationOut])
+async def get_notifications_no_slash(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    unread_only: bool = False
+):
+    return await get_notifications(current_user, db, limit, offset, unread_only)
 
 @router.get("/unread-count")
 async def get_unread_count(

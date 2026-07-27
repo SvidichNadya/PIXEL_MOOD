@@ -16,7 +16,6 @@ from app.models.notification import Notification
 from app.schemas.calendar import CalendarCreate, CalendarUpdate, CalendarOut
 from app.schemas.mood import MoodOut
 
-# Убираем redirect_slashes=False — оставляем по умолчанию (true)
 router = APIRouter(prefix="/calendars", tags=["calendars"])
 
 # ============================================================
@@ -48,7 +47,7 @@ async def search_users(
     ]
 
 # ============================================================
-# Основные эндпоинты
+# Основные эндпоинты (со слешем и без)
 # ============================================================
 
 @router.post("/", response_model=CalendarOut, status_code=status.HTTP_201_CREATED)
@@ -75,6 +74,11 @@ async def create_calendar(
     await db.refresh(calendar)
     return calendar
 
+# Дублируем POST без слеша для надёжности
+@router.post("", response_model=CalendarOut, status_code=status.HTTP_201_CREATED)
+async def create_calendar_no_slash(payload: CalendarCreate, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    return await create_calendar(payload, current_user, db)
+
 @router.get("/", response_model=List[CalendarOut])
 async def list_calendars(
     current_user: User = Depends(get_current_user),
@@ -92,6 +96,11 @@ async def list_calendars(
     result = await db.execute(stmt)
     calendars = result.scalars().all()
     return calendars
+
+# Дублируем GET без слеша
+@router.get("", response_model=List[CalendarOut])
+async def list_calendars_no_slash(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db), skip: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100)):
+    return await list_calendars(current_user, db, skip, limit)
 
 @router.get("/{calendar_id}", response_model=CalendarOut)
 async def get_calendar(
@@ -181,7 +190,7 @@ async def get_calendar_moods(
         select(Mood)
         .where(Mood.calendar_id == calendar_id, Mood.date == target_date)
         .order_by(Mood.created_at)
-        .options(selectinload(Mood.user))  # подгружаем пользователя для получения имени
+        .options(selectinload(Mood.user))
     )
     result = await db.execute(stmt)
     moods = result.scalars().all()
@@ -218,7 +227,6 @@ async def invite_to_calendar(
     new_members = list(set(calendar.member_ids + payload.user_ids))
     calendar.member_ids = new_members
 
-    # Создаём уведомления для новых участников (кроме владельца)
     if new_user_ids:
         for uid in new_user_ids:
             if uid != current_user.id:
@@ -242,7 +250,6 @@ async def leave_calendar(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Выйти из календаря (только если пользователь не владелец)."""
     stmt = select(Calendar).where(Calendar.id == calendar_id)
     result = await db.execute(stmt)
     calendar = result.scalar_one_or_none()
