@@ -16,9 +16,6 @@ ARG VITE_API_BASE=/api
 ENV VITE_API_BASE=$VITE_API_BASE
 
 RUN npm run build
-# Проверяем, что сборка создала index.html
-RUN ls -la /app/frontend/dist || echo "dist directory is empty"
-
 
 # ========== ЭТАП 2: ФИНАЛЬНЫЙ ОБРАЗ ==========
 FROM python:3.11-slim
@@ -31,9 +28,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Удаляем стандартный конфиг nginx (чтобы использовать только наш)
-RUN rm /etc/nginx/conf.d/default.conf
-
 # Копируем бекенд
 COPY backend/ ./backend/
 
@@ -45,8 +39,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Копируем собранный фронтенд
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
 
-# Копируем конфиг nginx и скрипты
+# Копируем конфиг nginx (перезаписывает любой существующий)
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Копируем скрипты сборки и запуска
 COPY build.sh /build.sh
 COPY start.sh /start.sh
 RUN chmod +x /build.sh /start.sh
