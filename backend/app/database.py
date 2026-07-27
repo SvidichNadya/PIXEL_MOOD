@@ -7,15 +7,15 @@ from app.config import settings
 # Создаём асинхронный движок SQLAlchemy
 engine = create_async_engine(
     settings.DATABASE_URL,
-    echo=False,  # В продакшене выключить, для отладки можно включить
+    echo=False,
     future=True,
     pool_size=20,
     max_overflow=40,
-    pool_pre_ping=True,  # Проверка соединения перед использованием
-    pool_recycle=3600,   # Пересоздавать соединения раз в час
+    pool_pre_ping=True,
+    pool_recycle=3600,
+    connect_args={"ssl": True}  # <--- добавляем SSL
 )
 
-# Фабрика сессий
 AsyncSessionLocal = async_sessionmaker(
     engine,
     class_=AsyncSession,
@@ -24,14 +24,9 @@ AsyncSessionLocal = async_sessionmaker(
     autoflush=False,
 )
 
-# Базовый класс для моделей
 Base = declarative_base()
 
-
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Зависимость FastAPI для получения сессии базы данных.
-    """
     async with AsyncSessionLocal() as session:
         try:
             yield session
