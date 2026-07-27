@@ -5,7 +5,7 @@ from sqlalchemy import String, Integer, Enum, DateTime, ForeignKey, Index, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base
+from app.models.base import Base
 
 class Payment(Base):
     __tablename__ = "payments"

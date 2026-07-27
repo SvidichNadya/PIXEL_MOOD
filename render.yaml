@@ -39,9 +39,8 @@ services:
         value: Turedy123
       - key: ADMIN_EMAIL
         value: admin@example.com
-      # Для сборки фронтенда (Vite)
       - key: VITE_API_BASE
-        value: /api   # или https://pixel-mood.onrender.com/api, если нужно абсолютное
+        value: /api
 
   - type: redis
     name: mood-pixel-redis

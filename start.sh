@@ -46,11 +46,10 @@ echo "✅ PostgreSQL готов!"
 echo ""
 echo "📦 Подготовка синхронного URL для Alembic..."
 
-# Сохраняем оригинальный URL
 ORIGINAL_DATABASE_URL="$DATABASE_URL"
 
-# Убираем +asyncpg для синхронного драйвера
-SYNC_DATABASE_URL=$(echo "$ORIGINAL_DATABASE_URL" | sed 's/+asyncpg//')
+# Убираем +asyncpg и параметры запроса (sslmode и т.п.), чтобы получить чистый синхронный URL
+SYNC_DATABASE_URL=$(echo "$ORIGINAL_DATABASE_URL" | sed -E 's/\+asyncpg//; s/\?.*//')
 export DATABASE_URL="$SYNC_DATABASE_URL"
 
 echo "📦 Применение миграций Alembic (синхронный драйвер)..."
