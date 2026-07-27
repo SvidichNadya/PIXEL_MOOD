@@ -5,7 +5,7 @@ from typing import AsyncGenerator
 from app.config import settings
 
 # Создаём асинхронный движок SQLAlchemy
-# Все SSL-параметры передаём через connect_args
+# Для Render используем только ssl=True (без sslmode)
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=False,
@@ -15,8 +15,7 @@ engine = create_async_engine(
     pool_pre_ping=True,
     pool_recycle=3600,
     connect_args={
-        "ssl": True,               # Включаем SSL
-        "sslmode": "require",      # Требуем SSL (для Render)
+        "ssl": True,   # Включаем SSL (asyncpg поймёт)
     }
 )
 

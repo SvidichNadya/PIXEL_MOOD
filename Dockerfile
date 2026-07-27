@@ -1,55 +1,37 @@
-# ========== ЭТАП 1: СБОРКА ФРОНТЕНДА ==========
-FROM node:18-alpine AS frontend-builder
-
-WORKDIR /app/frontend
-
-RUN npm config set registry https://registry.npmmirror.com
-RUN npm config set fetch-timeout 600000
-RUN npm config set fetch-retries 5
-
-COPY frontend/package*.json ./
-RUN npm install --legacy-peer-deps
-
-COPY frontend/ ./
-
-ARG VITE_API_BASE=/api
-ENV VITE_API_BASE=$VITE_API_BASE
-
-RUN npm run build
-
-
-# ========== ЭТАП 2: ФИНАЛЬНЫЙ ОБРАЗ ==========
+# Используем официальный образ Python
 FROM python:3.11-slim
 
-WORKDIR /app
-
+# Устанавливаем системные зависимости (включая postgresql-client для pg_isready)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    nginx \
     gcc \
-    libpq-dev \
+    postgresql-client \
+    nginx \
     && rm -rf /var/lib/apt/lists/*
 
-# Удаляем стандартные конфиги nginx (чтобы избежать конфликтов)
-RUN rm -f /etc/nginx/sites-enabled/default
-RUN rm -f /etc/nginx/conf.d/default.conf
+# Устанавливаем рабочую директорию
+WORKDIR /app
 
-# Копируем бекенд
-COPY backend/ ./backend/
+# Копируем backend и frontend
+COPY backend/ /app/backend/
+COPY frontend/ /app/frontend/
 
-# Устанавливаем Python-зависимости
-WORKDIR /app/backend
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Копируем собранный фронтенд
-COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
-
-# Копируем конфиг nginx и скрипты
+# Копируем конфиг nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY build.sh /build.sh
-COPY start.sh /start.sh
-RUN chmod +x /build.sh /start.sh
 
-EXPOSE 80
+# Копируем скрипты запуска
+COPY build.sh start.sh /app/
+RUN chmod +x /app/build.sh /app/start.sh
 
-CMD ["/start.sh"]
+# Устанавливаем Python-зависимости (build-стадия)
+RUN cd /app/backend && pip install --no-cache-dir -r requirements.txt
+
+# Собираем фронтенд (если нужно, но предположим, что он уже собран)
+# Если фронтенд собирается отдельно, то просто копируем сборку
+# Для примера скопируем готовую сборку из папки frontend/dist
+COPY frontend/dist /usr/share/nginx/html
+
+# Открываем порт 8000 для бекенда (nginx слушает 80)
+EXPOSE 8000 80
+
+# Запускаем start.sh
+CMD ["/app/start.sh"]

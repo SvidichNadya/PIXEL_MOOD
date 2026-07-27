@@ -14,38 +14,32 @@ cd /app/backend
 pip install --no-cache-dir -r requirements.txt
 
 # ==============================================
-# 2. ЖДЁМ БАЗУ ДАННЫХ
+# 2. ПАРСИМ DATABASE_URL ДЛЯ ПРОВЕРКИ
 # ==============================================
 echo ""
-echo "⏳ Ожидание готовности PostgreSQL..."
+echo "🔍 Парсинг DATABASE_URL..."
+DB_HOST=$(python -c "import os; from urllib.parse import urlparse; u=urlparse(os.environ['DATABASE_URL']); print(u.hostname or '')")
+DB_PORT=$(python -c "import os; from urllib.parse import urlparse; u=urlparse(os.environ['DATABASE_URL']); print(u.port or 5432)")
+DB_USER=$(python -c "import os; from urllib.parse import urlparse; u=urlparse(os.environ['DATABASE_URL']); print(u.username or '')")
+DB_NAME=$(python -c "import os; from urllib.parse import urlparse; u=urlparse(os.environ['DATABASE_URL']); print(u.path.lstrip('/') or '')")
 
-# Пробуем подключиться к БД с помощью pg_isready (если есть) или через Python
+echo "🔍 Хост: $DB_HOST, Порт: $DB_PORT, База: $DB_NAME"
+
+# ==============================================
+# 3. ЖДЁМ БАЗУ ДАННЫХ С ПОМОЩЬЮ pg_isready
+# ==============================================
+echo ""
+echo "⏳ Ожидание готовности PostgreSQL (pg_isready)..."
+
 MAX_RETRIES=30
 RETRY_COUNT=0
 
-# Функция проверки БД через Python
-check_db() {
-    python -c "
-import asyncio
-from sqlalchemy import text
-from app.database import AsyncSessionLocal
-
-async def check():
-    try:
-        async with AsyncSessionLocal() as session:
-            await session.execute(text('SELECT 1'))
-        return True
-    except Exception:
-        return False
-
-print(asyncio.run(check()))
-" 2>/dev/null
-}
-
-until check_db | grep -q "True"; do
+until pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1; do
     RETRY_COUNT=$((RETRY_COUNT + 1))
     if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
         echo "❌ Не удалось подключиться к PostgreSQL после $MAX_RETRIES попыток."
+        echo "Последняя ошибка pg_isready:"
+        pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME"
         exit 1
     fi
     echo "⏳ Ожидание БД... (попытка $RETRY_COUNT/$MAX_RETRIES)"
@@ -55,7 +49,7 @@ done
 echo "✅ PostgreSQL готов!"
 
 # ==============================================
-# 3. ПРИМЕНЯЕМ МИГРАЦИИ
+# 4. ПРИМЕНЯЕМ МИГРАЦИИ
 # ==============================================
 echo ""
 echo "📦 Применение миграций Alembic..."
@@ -64,7 +58,7 @@ alembic upgrade head
 echo "✅ Миграции применены успешно!"
 
 # ==============================================
-# 4. СОЗДАЁМ АДМИНИСТРАТОРА
+# 5. СОЗДАЁМ АДМИНИСТРАТОРА
 # ==============================================
 echo ""
 echo "👤 Создание администратора..."
@@ -79,7 +73,7 @@ from app.config import settings
 from app.services.auth_service import AuthService
 
 async def create_admin():
-    engine = create_async_engine(settings.DATABASE_URL)
+    engine = create_async_engine(settings.DATABASE_URL, connect_args={'ssl': True})
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with async_session() as session:
         stmt = select(User).where(User.username == os.environ.get('ADMIN_USERNAME', 'admin'))
@@ -106,7 +100,7 @@ asyncio.run(create_admin())
 "
 
 # ==============================================
-# 5. ПРОВЕРКА ФРОНТЕНДА
+# 6. ПРОВЕРКА ФРОНТЕНДА
 # ==============================================
 echo ""
 echo "📦 Проверка фронтенда..."
@@ -118,7 +112,7 @@ else
 fi
 
 # ==============================================
-# 6. ЗАПУСК NGINX
+# 7. ЗАПУСК NGINX
 # ==============================================
 echo ""
 echo "🚀 Проверка конфигурации nginx..."
@@ -130,7 +124,7 @@ nginx -g "daemon off;" &
 NGINX_PID=$!
 
 # ==============================================
-# 7. ЗАПУСК БЕКЕНДА
+# 8. ЗАПУСК БЕКЕНДА
 # ==============================================
 echo ""
 echo "🚀 Запуск FastAPI бекенда..."
