@@ -10,7 +10,7 @@ from app.models.user import User
 from app.models.notification import Notification
 from app.schemas.notification import NotificationOut
 
-router = APIRouter(prefix="/notifications", tags=["notifications"])
+router = APIRouter(prefix="/notifications", tags=["notifications"], redirect_slashes=False)
 
 @router.get("/", response_model=List[NotificationOut])
 async def get_notifications(
