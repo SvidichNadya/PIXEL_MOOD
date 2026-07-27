@@ -94,13 +94,9 @@ const Profile = () => {
 
         <div className="mt-4 flex flex-wrap gap-3">
           <DonateButton amount={50} label={t('profile.donate')} variant="primary" />
-          <DonateButton
-            amount={100}
-            label={t('profile.donate')}
-            variant="secondary"
-            className="hidden sm:inline-flex"  // <-- скрываем на мобильных
-          />
-          <button onClick={logout} className="btn-danger text-sm px-4 py-2">
+        </div>
+        <div className="mt-4 flex flex-wrap gap-3">
+            <button onClick={logout} className="btn-danger text-sm px-4 py-2">
             {t('nav.logout')}
           </button>
         </div>
