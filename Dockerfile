@@ -29,7 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Удаляем ВСЕ стандартные конфиги nginx, чтобы избежать конфликтов
+# Удаляем стандартные конфиги nginx (чтобы избежать конфликтов)
 RUN rm -f /etc/nginx/sites-enabled/default
 RUN rm -f /etc/nginx/conf.d/default.conf
 
@@ -44,10 +44,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Копируем собранный фронтенд
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
 
-# Копируем наш конфиг nginx (теперь он единственный)
+# Копируем конфиг nginx и скрипты
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Копируем скрипты
 COPY build.sh /build.sh
 COPY start.sh /start.sh
 RUN chmod +x /build.sh /start.sh
