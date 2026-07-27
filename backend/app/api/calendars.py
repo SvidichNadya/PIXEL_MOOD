@@ -16,7 +16,8 @@ from app.models.notification import Notification
 from app.schemas.calendar import CalendarCreate, CalendarUpdate, CalendarOut
 from app.schemas.mood import MoodOut
 
-router = APIRouter(prefix="/calendars", tags=["calendars"], redirect_slashes=False)
+# Убираем redirect_slashes=False — оставляем по умолчанию (true)
+router = APIRouter(prefix="/calendars", tags=["calendars"])
 
 # ============================================================
 # search-users должен быть первым, чтобы не конфликтовать с /{calendar_id}

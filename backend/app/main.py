@@ -10,7 +10,6 @@ from app.config import settings
 from app.database import engine
 from app.redis_client import redis_client
 
-# Импортируем роутеры из __init__.py
 from app.api import (
     auth_router,
     moods_router,
@@ -45,10 +44,9 @@ app = FastAPI(
     description="API for global and private mood calendars",
     version="1.0.0",
     lifespan=lifespan,
-    redirect_slashes=False,  # Глобальное отключение редиректов
+    redirect_slashes=False,
 )
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
@@ -84,7 +82,7 @@ async def general_exception_handler(request: Request, exc: Exception):
         content={"detail": "Internal server error"},
     )
 
-# ---- Роутер с префиксом /api ----
+# ---- Подключаем роутеры ----
 api_router = APIRouter(prefix="/api")
 api_router.include_router(auth_router)
 api_router.include_router(moods_router)
@@ -97,7 +95,19 @@ api_router.include_router(admin_router)
 api_router.include_router(notifications_router)
 app.include_router(api_router)
 
-# ---- Корневые эндпоинты (без префикса) ----
+# ---- Отладочный эндпоинт: показывает все зарегистрированные пути ----
+@app.get("/debug/routes")
+async def debug_routes():
+    routes = []
+    for route in app.routes:
+        if hasattr(route, "path") and hasattr(route, "methods"):
+            routes.append({
+                "path": route.path,
+                "methods": list(route.methods) if route.methods else []
+            })
+    return {"routes": routes}
+
+# ---- Корневые эндпоинты ----
 @app.get("/health")
 async def health_check():
     redis_status = "ok" if await redis_client.ping() else "failed"
