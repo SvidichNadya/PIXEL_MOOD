@@ -10,17 +10,16 @@ from app.config import settings
 from app.database import engine
 from app.redis_client import redis_client
 
-from app.api import (
-    auth_router,
-    moods_router,
-    calendars_router,
-    reactions_router,
-    payments_router,
-    stats_router,
-    support_router,
-    admin_router,
-    notifications_router,
-)
+# Прямые импорты роутеров (без посредника __init__.py)
+from app.api.auth import router as auth_router
+from app.api.moods import router as moods_router
+from app.api.calendars import router as calendars_router
+from app.api.reactions import router as reactions_router
+from app.api.payments import router as payments_router
+from app.api.stats import router as stats_router
+from app.api.support import router as support_router
+from app.api.admin import router as admin_router
+from app.api.notifications import router as notifications_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -44,9 +43,10 @@ app = FastAPI(
     description="API for global and private mood calendars",
     version="1.0.0",
     lifespan=lifespan,
-    redirect_slashes=False,
+    # Редиректы включены по умолчанию – это правильно
 )
 
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
@@ -95,7 +95,7 @@ api_router.include_router(admin_router)
 api_router.include_router(notifications_router)
 app.include_router(api_router)
 
-# ---- Отладочный эндпоинт: показывает все зарегистрированные пути ----
+# ---- Отладочный эндпоинт – посмотреть все зарегистрированные пути ----
 @app.get("/debug/routes")
 async def debug_routes():
     routes = []
