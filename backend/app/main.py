@@ -71,8 +71,8 @@ async def general_exception_handler(request: Request, exc: Exception):
         content={"detail": "Internal server error"},
     )
 
-# ---- Только роутер с префиксом /api ----
-api_router = APIRouter(prefix="/api")
+# ---- Роутер с префиксом /api и отключением редиректов ----
+api_router = APIRouter(prefix="/api", redirect_slashes=False)
 api_router.include_router(auth.router)
 api_router.include_router(moods.router)
 api_router.include_router(calendars.router)
