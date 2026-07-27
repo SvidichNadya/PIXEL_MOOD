@@ -16,6 +16,8 @@ ARG VITE_API_BASE=/api
 ENV VITE_API_BASE=$VITE_API_BASE
 
 RUN npm run build
+# Проверяем, что сборка создала index.html
+RUN ls -la /app/frontend/dist || echo "dist directory is empty"
 
 
 # ========== ЭТАП 2: ФИНАЛЬНЫЙ ОБРАЗ ==========
@@ -28,6 +30,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# Удаляем стандартный конфиг nginx (чтобы использовать только наш)
+RUN rm /etc/nginx/conf.d/default.conf
 
 # Копируем бекенд
 COPY backend/ ./backend/
