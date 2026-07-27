@@ -16,7 +16,8 @@ from app.models.mood import Mood
 from app.models.calendar import Calendar
 from app.models.reaction import Reaction
 from app.models.payment import Payment
-from app.models.support import SupportTicket
+# Исправлено: SupportRequest вместо SupportTicket
+from app.models.support import SupportRequest
 from app.models.notification import Notification
 # ... добавьте остальные модели, если есть
 
