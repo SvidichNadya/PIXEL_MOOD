@@ -5,6 +5,7 @@ services:
     plan: free
     dockerContext: .
     dockerfilePath: ./Dockerfile
+    port: 8000
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL

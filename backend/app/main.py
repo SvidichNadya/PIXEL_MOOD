@@ -10,6 +10,7 @@ from app.config import settings
 from app.database import engine
 from app.redis_client import redis_client
 from app.api import auth, moods, calendars, reactions, payments, stats, support, admin, notifications
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -78,9 +79,9 @@ api_router.include_router(calendars.router)
 api_router.include_router(reactions.router)
 api_router.include_router(payments.router)
 api_router.include_router(stats.router)
-api_router.include_router(support.router)        # новый
-api_router.include_router(admin.router)          # новый
-api_router.include_router(notifications.router)  # уже был
+api_router.include_router(support.router)
+api_router.include_router(admin.router)
+api_router.include_router(notifications.router)
 app.include_router(api_router)
 
 # ---- Корневые эндпоинты (без префикса) ----
