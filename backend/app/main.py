@@ -33,6 +33,7 @@ app = FastAPI(
     description="API for global and private mood calendars",
     version="1.0.0",
     lifespan=lifespan,
+    redirect_slashes=False,  # <-- ГЛОБАЛЬНОЕ ОТКЛЮЧЕНИЕ РЕДИРЕКТОВ
 )
 
 # CORS
@@ -71,8 +72,8 @@ async def general_exception_handler(request: Request, exc: Exception):
         content={"detail": "Internal server error"},
     )
 
-# ---- Роутер с префиксом /api и отключением редиректов ----
-api_router = APIRouter(prefix="/api", redirect_slashes=False)
+# ---- Роутер с префиксом /api ----
+api_router = APIRouter(prefix="/api")
 api_router.include_router(auth.router)
 api_router.include_router(moods.router)
 api_router.include_router(calendars.router)
