@@ -17,6 +17,7 @@ ENV VITE_API_BASE=$VITE_API_BASE
 
 RUN npm run build
 
+
 # ========== ЭТАП 2: ФИНАЛЬНЫЙ ОБРАЗ ==========
 FROM python:3.11-slim
 
@@ -27,6 +28,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# Удаляем ВСЕ стандартные конфиги nginx, чтобы избежать конфликтов
+RUN rm -f /etc/nginx/sites-enabled/default
+RUN rm -f /etc/nginx/conf.d/default.conf
 
 # Копируем бекенд
 COPY backend/ ./backend/
@@ -39,10 +44,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Копируем собранный фронтенд
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
 
-# Копируем конфиг nginx (перезаписывает любой существующий)
+# Копируем наш конфиг nginx (теперь он единственный)
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Копируем скрипты сборки и запуска
+# Копируем скрипты
 COPY build.sh /build.sh
 COPY start.sh /start.sh
 RUN chmod +x /build.sh /start.sh
