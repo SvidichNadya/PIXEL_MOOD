@@ -1,0 +1,132 @@
+# === Python (Backend) ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+.venv.bak/
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# === Node.js / Frontend ===
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+lerna-debug.log*
+*.log
+dist/
+dist-ssr/
+*.local
+*.min.js
+*.min.css
+
+# === IDE / Editor ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.sublime-workspace
+*.sublime-project
+
+# === Environment variables (CRITICAL) ===
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# === Docker ===
+docker-compose.override.yml
+*.pid
+*.socket
+
+# === Database (локальные) ===
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# === Secrets / Keys ===
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.p8
+
+# === Generated / Cache ===
+*.pyc
+*.pyo
+*.egg-info/
+*.egg
+.eggs/
+*.manifest
+*.spec
+.installed.cfg
+pip-wheel-metadata/
+share/python-wheels/
+*.dist/
+*.cache/
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tmp/
+*.tmp
+temp/
+logs/
+
+# === Alembic (миграции не коммитятся, если это dev-данные) ===
+# но сами миграции обычно коммитят, поэтому не блокируем
+# закомментировать, если хотите хранить миграции:
+# migrations/versions/*.pyc
+# migrations/versions/__pycache__/
+
+# === React / Vite ===
+*.chunk.js
+*.chunk.css
+assets/
+*.map
+*.gz
+*.br
+*.webmanifest
+sw.js
+workbox-*.js
+
+# === OS ===
+.DS_Store
+Thumbs.db
+*.tmp
+
+# === Postgres (если локально) ===
+pgdata/
+postgres_data/
+
+# === Redis (локально) ===
+dump.rdb
+appendonly.aof

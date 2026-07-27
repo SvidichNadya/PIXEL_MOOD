@@ -1,0 +1,16 @@
+export const MOOD_COLORS = [
+  { value: '#FF6B6B', label: 'Гнев' },
+  { value: '#FF8A5C', label: 'Раздражение' },
+  { value: '#FFA94D', label: 'Тревога' },
+  { value: '#FFD93D', label: 'Радость' },
+  { value: '#6BCB77', label: 'Спокойствие' },
+  { value: '#4D96FF', label: 'Грусть' },
+  { value: '#9B59B6', label: 'Меланхолия' },
+  { value: '#F368E0', label: 'Вдохновение' },
+  { value: '#00D2D3', label: 'Умиротворение' },
+  { value: '#54A0FF', label: 'Задумчивость' },
+  { value: '#5F27CD', label: 'Таинственность' },
+  { value: '#FF6FB7', label: 'Нежность' },
+  { value: '#FF9FF3', label: 'Лёгкость' },
+  { value: '#FECA57', label: 'Оптимизм' },
+];

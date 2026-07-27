@@ -1,0 +1,166 @@
+{
+  "app": {
+    "name": "Mood Pixel",
+    "title": "World Pulse"
+  },
+  "nav": {
+    "global": "Global",
+    "profile": "Profile",
+    "stats": "Stats",
+    "admin": "Admin",
+    "logout": "Logout",
+    "login": "Login",
+    "register": "Register"
+  },
+  "auth": {
+    "login": {
+      "title": "Login to Mood Pixel",
+      "subtitle": "Login to leave your mark",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Login",
+      "no_account": "Don't have an account?",
+      "register_link": "Register"
+    },
+    "register": {
+      "title": "Registration",
+      "subtitle": "Join the world mood diary",
+      "username": "Username",
+      "email": "Email",
+      "display_name": "Display name",
+      "display_name_hint": "If not specified, username will be used",
+      "password": "Password",
+      "confirm_password": "Confirm password",
+      "submit": "Register",
+      "have_account": "Already have an account?",
+      "login_link": "Login",
+      "consent": "I agree to the possibility of paid disclosure of my authorship in public pixels",
+      "username_placeholder": "mood_user",
+      "email_placeholder": "your@email.com",
+      "display_name_placeholder": "What to call you",
+      "password_placeholder": "Minimum 6 characters",
+      "confirm_password_placeholder": "Repeat password",
+      "success": "Registration successful! Welcome to Mood Pixel."
+    },
+    "vk": {
+      "or": "Or via",
+      "auth": "Authorizing via VK..."
+    }
+  },
+  "home": {
+    "title": "World Pulse",
+    "pixels_today": "pixels today",
+    "click_to_leave": "Click on an empty cell to leave your mark",
+    "already_left": "✨ You have already left your mark today",
+    "login_to_leave": "Login to leave your mark",
+    "success": "Your mark has been saved!"
+  },
+  "calendar": {
+    "participants": "Participants",
+    "owner": "owner",
+    "back": "Back",
+    "leave": "Leave calendar",
+    "created": "Created",
+    "no_calendars": "You don't have any private calendars yet",
+    "create_first": "Create first",
+    "create": "Create",
+    "my_calendars": "My private calendars",
+    "invite": "Invite",
+    "search_users": "Search by name or email",
+    "find": "Find",
+    "no_users_found": "No users found",
+    "selected": "Selected",
+    "cancel": "Cancel",
+    "invite_send": "Invite",
+    "sending": "Sending...",
+    "invite_success": "Invitations sent",
+    "leave_confirm": "Are you sure you want to leave this calendar?",
+    "delete_confirm": "Delete calendar \"{name}\"? All pixels will be deleted.",
+    "leave_success": "You have left the calendar",
+    "delete_success": "Calendar deleted",
+    "create_success": "Calendar \"{name}\" created!",
+    "create_error": "Error creating calendar",
+    "already_left": "✨ You have already left your mark in this calendar today",
+    "not_found": "Calendar not found",
+    "show_all": "Show all calendars"
+  },
+  "profile": {
+    "title": "Profile",
+    "id": "ID",
+    "anonymous_default": "Default anonymity",
+    "on": "On",
+    "off": "Off",
+    "support": "Support the project",
+    "donate": "Donate"
+  },
+  "stats": {
+    "title": "Statistics",
+    "total_pixels": "Total pixels",
+    "unique_colors": "Unique colors",
+    "top_authors": "Top authors",
+    "max_one": "Maximum by one",
+    "color_distribution": "Color distribution",
+    "no_data": "No data for this day"
+  },
+  "mood": {
+    "pick_color": "Pick a mood color",
+    "message": "Your message (optional)",
+    "max_chars": "Maximum 500 characters",
+    "anonymous": "Leave anonymously",
+    "send": "Send",
+    "cancel": "Cancel",
+    "close": "Close",
+    "show_more": "Show more",
+    "show_less": "Show less",
+    "anonymous_badge": "anonymous",
+    "you": "you",
+    "unknown": "Unknown",
+    "reveal": "Reveal author",
+    "delete": "Delete",
+    "deleting": "Deleting...",
+    "delete_confirm": "Delete this mood?",
+    "delete_success": "Mood deleted",
+    "delete_error": "Error deleting"
+  },
+  "onboarding": {
+    "step1_title": "🌍 Welcome to Mood Pixel!",
+    "step1_desc": "This is your personal mood diary that connects people from all over the world.",
+    "step2_title": "🎨 How to leave a mark?",
+    "step2_desc": "Click on any empty cell on the calendar, choose a color that reflects your mood, and add a message (optional).",
+    "step3_title": "🔍 Explore others' marks",
+    "step3_desc": "Click on other users' pixels to see their mood and leave a reaction.",
+    "step4_title": "📅 Create private calendars",
+    "step4_desc": "Invite friends to personal calendars and share moods only with close ones.",
+    "skip": "Skip",
+    "next": "Next →",
+    "finish": "Start!",
+    "loading": "Loading..."
+  },
+  "support": {
+    "title": "Support",
+    "description": "Describe your problem or suggestion. We will contact you via email.",
+    "message_placeholder": "Enter your message...",
+    "send": "Send",
+    "sending": "Sending...",
+    "success": "Message sent! We will reply shortly.",
+    "error": "Error sending",
+    "error_empty": "Please write a message"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "mark_all_read": "Mark all read",
+    "mark_all_read_success": "All notifications marked as read",
+    "no_notifications": "No notifications",
+    "loading": "Loading...",
+    "go_to": "Go to"
+  },
+  "common": {
+    "loading": "Loading...",
+    "retry": "Retry"
+  },
+  "errors": {
+    "login": "Login error. Check email and password.",
+    "register": "Registration error. Try again later.",
+    "generic": "Something went wrong"
+  }
+}
