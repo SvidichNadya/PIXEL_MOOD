@@ -153,3 +153,9 @@ class AuthService:
             "token_type": "bearer",
             "expires_at": expires.isoformat()
         }
+
+    @staticmethod
+    def hash_password(password: str) -> str:
+        from passlib.context import CryptContext
+        pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
+        return pwd_context.hash(password)

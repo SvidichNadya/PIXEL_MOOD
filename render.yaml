@@ -1,0 +1,53 @@
+# render.yaml
+services:
+  - type: web
+    name: pixel-mood
+    runtime: image
+    plan: free
+    dockerContext: .
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: mood-pixel-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: mood-pixel-redis
+          type: redis
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: https://pixel-mood.onrender.com
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: mood-pixel-db
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: mood-pixel-db
+          property: password
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: mood-pixel-db
+          property: database
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        value: Turedy123
+      - key: ADMIN_EMAIL
+        value: admin@example.com
+
+  - type: redis
+    name: mood-pixel-redis
+    plan: free
+    maxmemoryPolicy: noeviction
+
+  - type: postgresql
+    name: mood-pixel-db
+    plan: free
+    database: moodpixel
+    user: mood
+    ipAllowList: []
