@@ -23,7 +23,8 @@
     "i18next": "^23.7.16",
     "react-i18next": "^13.3.1",
     "i18next-http-backend": "^2.4.2",
-    "i18next-browser-languagedetector": "^7.1.0"
+    "i18next-browser-languagedetector": "^7.1.0",
+    "@vkontakte/vk-bridge": "^2.15.9"
   },
   "devDependencies": {
     "@types/react": "^18.2.37",
