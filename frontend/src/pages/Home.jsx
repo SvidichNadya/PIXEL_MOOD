@@ -1,4 +1,3 @@
-// frontend/src/pages/Home.jsx
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCanvas } from '../components/calendarCanvas/useCanvas';
@@ -80,18 +79,28 @@ const Home = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-        {t('home.title')}
-      </h1>
+      {/* Верхняя панель: заголовок, дата, выбор даты */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          {t('home.title')}
+        </h1>
 
-      {/* ✅ ИСПРАВЛЕНО: обёртка с отступами */}
-      <div className="mb-4">
-        <input
-          type="date"
-          className="bg-surface border border-border rounded-lg px-4 py-2 text-text-primary w-full sm:w-auto"
-          value={currentDate}
-          onChange={(e) => setCurrentDate(e.target.value)}
-        />
+        <div className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+          {new Date(currentDate).toLocaleDateString('ru-RU', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+          })}
+        </div>
+
+        <div className="w-full sm:w-auto">
+          <input
+            type="date"
+            className="bg-surface border border-border rounded-lg px-4 py-2 text-text-primary w-full sm:w-auto"
+            value={currentDate}
+            onChange={(e) => setCurrentDate(e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
@@ -109,13 +118,9 @@ const Home = () => {
               myMood={myMood}
               isAuthenticated={isAuthenticated}
             />
-            
+
             <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-              {new Date(currentDate).toLocaleDateString('ru-RU', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              })} {' · '} {pixels.length} {t('home.pixels_today')}
+              {pixels.length} {t('home.pixels_today')}
             </div>
 
             {!myMood && isAuthenticated && !showPicker && (

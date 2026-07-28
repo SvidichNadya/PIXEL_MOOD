@@ -8,6 +8,9 @@ import NotificationsDropdown from '../notifications/NotificationsDropdown';
 import SupportModal from '../support/SupportModal';
 import LanguageSwitcher from './LanguageSwitcher';
 
+// Импорт логотипа через относительный путь
+import logo from '../../../universal-icon-576.png';
+
 const Navbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -49,11 +52,7 @@ const Navbar = () => {
           <div className="flex items-center justify-between h-16">
             {/* Логотип */}
             <Link to="/" className="flex items-center space-x-2">
-                      <img
-                        src="/images/universal-icon-576.png"   // или /images/logo.png
-                        alt="Логотип"
-                        className="h-10 w-auto"   // задайте нужный размер
-                      />
+              <img src={logo} alt="Логотип" className="h-10 w-auto" />
               <span className="text-lg font-semibold text-text-primary hidden sm:block">
                 PIXEL Mood
               </span>
@@ -74,7 +73,6 @@ const Navbar = () => {
                   {link.label}
                 </Link>
               ))}
-              {/* Ссылка на админку (только для админа) */}
               {user?.is_admin && (
                 <Link
                   to="/admin/support"
@@ -89,11 +87,7 @@ const Navbar = () => {
             <div className="flex items-center space-x-4">
               {user && (
                 <>
-
-                  {/* Уведомления */}
                   <NotificationsDropdown />
-
-                  {/* Аватар пользователя (десктоп) */}
                   <div className="hidden md:flex items-center space-x-3">
                     {user.avatar_url ? (
                       <img
@@ -112,8 +106,6 @@ const Navbar = () => {
                       {user.display_name}
                     </span>
                   </div>
-
-                  {/* Кнопка поддержки */}
                   <button
                     onClick={() => setShowSupportModal(true)}
                     className="p-2 rounded-lg hover:bg-surfaceLight transition-colors"
@@ -124,13 +116,9 @@ const Navbar = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
                   </button>
-
                   <LanguageSwitcher />
-
                 </>
               )}
-
-              {/* Кнопка меню (мобилка) */}
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="md:hidden p-2 rounded-lg hover:bg-surfaceLight transition-colors"
@@ -180,7 +168,6 @@ const Navbar = () => {
                     {link.label}
                   </Link>
                 ))}
-                {/* Админка в мобильном меню */}
                 {user?.is_admin && (
                   <Link
                     to="/admin/support"

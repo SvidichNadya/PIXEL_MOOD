@@ -115,7 +115,7 @@ const CalendarCanvas = ({
 
       if (pixel) {
         // Рисуем пиксель
-        const color = pixel.color || '#2d2d44';
+        const color = pixel.color || '#232334';
         ctx.fillStyle = color;
 
         if (pixel.isNew) {

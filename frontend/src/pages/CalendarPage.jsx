@@ -1,4 +1,3 @@
-// frontend/src/pages/CalendarPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -64,8 +63,7 @@ const CalendarPage = () => {
     }
     try {
       await createMood(color, message, isAnonymous, selectedIndex);
-      // ✅ ИСПРАВЛЕНО: используем правильный ключ для сообщения
-      toast.success(t('home.success') || 'Ваш след сохранён!');
+      toast.success(t('home.success') || 'Ваш след сохранён!'); // исправлено
       setShowPicker(false);
       clearSelected();
     } catch (error) {
@@ -113,9 +111,7 @@ const CalendarPage = () => {
   if (!calendar) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6 text-center">
-        <p className="text-gray-600 dark:text-gray-400">
-          {t('calendar.not_found') || 'Календарь не найден'}
-        </p>
+        <p className="text-gray-600 dark:text-gray-400">{t('calendar.not_found') || 'Календарь не найден'}</p>
         <Link to="/profile" className="text-blue-500 hover:text-blue-600 mt-4 inline-block">
           {t('calendar.back')}
         </Link>
@@ -127,21 +123,44 @@ const CalendarPage = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {calendar.name}
-        </h1>
-        <div className="flex items-center gap-3">
+      {/* Верхняя панель: название календаря, дата, выбор даты */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white truncate">
+            {calendar.name}
+          </h1>
+          {isOwner && (
+            <span className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-0.5 rounded-full">
+              {t('calendar.owner')}
+            </span>
+          )}
+        </div>
+
+        <div className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+          {new Date(currentDate).toLocaleDateString('ru-RU', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+          })}
+        </div>
+
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <input
+            type="date"
+            className="bg-surface border border-border rounded-lg px-4 py-2 text-text-primary w-full sm:w-auto"
+            value={currentDate}
+            onChange={(e) => setCurrentDate(e.target.value)}
+          />
           <Link
             to="/profile"
-            className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+            className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 whitespace-nowrap"
           >
             ← {t('calendar.back')}
           </Link>
           {!isOwner && (
             <button
               onClick={handleLeaveCalendar}
-              className="text-sm text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"
+              className="text-sm text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 whitespace-nowrap"
             >
               {t('calendar.leave')}
             </button>
@@ -155,17 +174,6 @@ const CalendarPage = () => {
 
       <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">
         {t('calendar.participants')}: {calendar.member_ids?.length || 1}
-        {isOwner && ` (${t('calendar.owner')})`}
-      </div>
-
-      {/* ✅ ИСПРАВЛЕНО: обёртка с отступами */}
-      <div className="mb-4">
-        <input
-          type="date"
-          className="bg-surface border border-border rounded-lg px-4 py-2 text-text-primary w-full sm:w-auto"
-          value={currentDate}
-          onChange={(e) => setCurrentDate(e.target.value)}
-        />
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
@@ -183,13 +191,9 @@ const CalendarPage = () => {
               myMood={myMood}
               isAuthenticated={isAuthenticated}
             />
-            
+
             <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-              {new Date(currentDate).toLocaleDateString('ru-RU', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              })} {' · '} {pixels.length} {t('home.pixels_today')}
+              {pixels.length} {t('home.pixels_today')}
             </div>
 
             {!myMood && isAuthenticated && !showPicker && (
