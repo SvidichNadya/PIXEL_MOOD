@@ -16,8 +16,6 @@ const Home = () => {
   const [selectedMood, setSelectedMood] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [showPicker, setShowPicker] = useState(false);
-  
-  // Текущая дата — сегодня
   const [currentDate, setCurrentDate] = useState(
     new Date().toISOString().split('T')[0]
   );
@@ -86,7 +84,7 @@ const Home = () => {
         {t('home.title')}
       </h1>
 
-      {/* Инпут для выбора даты (как на странице статистики) */}
+      {/* ✅ ИСПРАВЛЕНО: обёртка с отступами */}
       <div className="mb-4">
         <input
           type="date"

@@ -78,7 +78,7 @@ const CalendarCanvas = ({
     // Очистка
     ctx.clearRect(0, 0, displayWidth, displayHeight);
 
-    // Фон
+    // Фон — исходный цвет
     ctx.fillStyle = '#1a1a2e';
     ctx.fillRect(0, 0, displayWidth, displayHeight);
 

@@ -21,8 +21,6 @@ const CalendarPage = () => {
   const [selectedMood, setSelectedMood] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [showPicker, setShowPicker] = useState(false);
-  
-  // Текущая дата — сегодня
   const [currentDate, setCurrentDate] = useState(
     new Date().toISOString().split('T')[0]
   );
@@ -66,7 +64,8 @@ const CalendarPage = () => {
     }
     try {
       await createMood(color, message, isAnonymous, selectedIndex);
-      toast.success(t('calendar.create_success') || 'Ваш след в календаре сохранён!');
+      // ✅ ИСПРАВЛЕНО: используем правильный ключ для сообщения
+      toast.success(t('home.success') || 'Ваш след сохранён!');
       setShowPicker(false);
       clearSelected();
     } catch (error) {
@@ -114,7 +113,9 @@ const CalendarPage = () => {
   if (!calendar) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6 text-center">
-        <p className="text-gray-600 dark:text-gray-400">{t('calendar.not_found') || 'Календарь не найден'}</p>
+        <p className="text-gray-600 dark:text-gray-400">
+          {t('calendar.not_found') || 'Календарь не найден'}
+        </p>
         <Link to="/profile" className="text-blue-500 hover:text-blue-600 mt-4 inline-block">
           {t('calendar.back')}
         </Link>
@@ -157,7 +158,7 @@ const CalendarPage = () => {
         {isOwner && ` (${t('calendar.owner')})`}
       </div>
 
-      {/* Инпут для выбора даты (как на странице статистики) */}
+      {/* ✅ ИСПРАВЛЕНО: обёртка с отступами */}
       <div className="mb-4">
         <input
           type="date"
