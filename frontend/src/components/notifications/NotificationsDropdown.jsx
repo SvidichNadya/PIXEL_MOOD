@@ -1,11 +1,10 @@
+// frontend/src/components/notifications/NotificationsDropdown.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { formatDistanceToNow } from 'date-fns';
-import { ru } from 'date-fns/locale';
-import toast from 'react-hot-toast';
 import client from '../../api/client';
 import { ENDPOINTS } from '../../api/endpoints';
+import toast from 'react-hot-toast';
 import { useAuth } from '../../hooks/useAuth';
 
 const NotificationsDropdown = () => {
@@ -16,47 +15,66 @@ const NotificationsDropdown = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
+  const buttonRef = useRef(null);
 
   const fetchUnreadCount = async () => {
-    if (!user) return;
     try {
-      const res = await client.get(ENDPOINTS.NOTIFICATIONS.UNREAD_COUNT);
-      setUnreadCount(res.data.count);
-    } catch (e) {
-      console.error('Failed to fetch unread count:', e);
+      const response = await client.get(ENDPOINTS.NOTIFICATIONS.UNREAD_COUNT);
+      setUnreadCount(response.data.count);
+    } catch (err) {
+      // ignore
     }
   };
 
   const fetchNotifications = async () => {
-    if (!user) return;
     setLoading(true);
     try {
-      const res = await client.get(ENDPOINTS.NOTIFICATIONS.LIST, {
-        params: { limit: 20, unread_only: false }
+      const response = await client.get(ENDPOINTS.NOTIFICATIONS.LIST, {
+        params: { limit: 20, unread_only: false },
       });
-      setNotifications(res.data);
-    } catch (e) {
-      toast.error(t('errors.generic'));
+      setNotifications(response.data);
+    } catch (err) {
+      toast.error(t('errors.fetch_notifications'));
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
-  }, [user]);
-
-  useEffect(() => {
-    if (isOpen) {
+  const handleOpen = () => {
+    if (!isOpen) {
       fetchNotifications();
     }
-  }, [isOpen]);
+    setIsOpen(!isOpen);
+  };
 
+  const handleMarkAsRead = async (id) => {
+    try {
+      await client.put(ENDPOINTS.NOTIFICATIONS.MARK_READ(id));
+      setNotifications(notifications.map(n =>
+        n.id === id ? { ...n, read: true } : n
+      ));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (err) {
+      toast.error(t('errors.mark_read'));
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await client.put(ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ);
+      setNotifications(notifications.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+      toast.success(t('notifications.all_read'));
+    } catch (err) {
+      toast.error(t('errors.mark_read'));
+    }
+  };
+
+  // Закрываем при клике вне
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
+          buttonRef.current && !buttonRef.current.contains(event.target)) {
         setIsOpen(false);
       }
     };
@@ -64,101 +82,140 @@ const NotificationsDropdown = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleMarkAsRead = async (id) => {
-    try {
-      await client.put(ENDPOINTS.NOTIFICATIONS.MARK_READ(id));
-      setNotifications(prev =>
-        prev.map(n => n.id === id ? { ...n, read: true } : n)
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (e) {
-      toast.error(t('errors.generic'));
+  // Обновляем счетчик при монтировании и каждые 30 секунд
+  useEffect(() => {
+    if (user) {
+      fetchUnreadCount();
+      const interval = setInterval(fetchUnreadCount, 30000);
+      return () => clearInterval(interval);
     }
-  };
-
-  const handleMarkAllRead = async () => {
-    try {
-      await client.put(ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ);
-      setNotifications(prev =>
-        prev.map(n => ({ ...n, read: true }))
-      );
-      setUnreadCount(0);
-      toast.success(t('notifications.mark_all_read_success') || 'Все уведомления прочитаны');
-    } catch (e) {
-      toast.error(t('errors.generic'));
-    }
-  };
+  }, [user]);
 
   if (!user) return null;
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative inline-block">
+      {/* Кнопка-колокольчик */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-lg hover:bg-surfaceLight transition-colors"
+        ref={buttonRef}
+        onClick={handleOpen}
+        className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
         aria-label={t('notifications.title')}
       >
-        <svg className="w-6 h-6 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-6 h-6 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
         </svg>
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-accent-red text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+          <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
+      {/* Выпадающее окно */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-surface border border-border rounded-xl shadow-2xl z-50 max-h-96 overflow-y-auto">
-          <div className="p-3 border-b border-border flex justify-between items-center sticky top-0 bg-surface z-10">
-            <span className="font-medium text-text-primary">{t('notifications.title')}</span>
-            {notifications.some(n => !n.read) && (
+        <div
+          ref={dropdownRef}
+          className="fixed sm:absolute inset-x-4 sm:inset-x-auto top-20 sm:top-auto sm:right-0 sm:mt-2 w-auto sm:w-96 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50 max-h-[80vh] flex flex-col"
+          style={{
+            // На мобильных экранах оставляем отступы, на десктопе позиционируем справа
+            maxWidth: 'min(calc(100vw - 2rem), 28rem)',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            // Для десктопа сбрасываем фиксацию
+            '@media (min-width: 640px)': {
+              position: 'absolute',
+              top: '100%',
+              left: 'auto',
+              right: 0,
+              marginLeft: 0,
+              marginRight: 0,
+            }
+          }}
+        >
+          {/* Заголовок */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {t('notifications.title')}
+            </h3>
+            <div className="flex items-center gap-2">
+              {notifications.some(n => !n.read) && (
+                <button
+                  onClick={handleMarkAllRead}
+                  className="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                  {t('notifications.mark_all_read')}
+                </button>
+              )}
               <button
-                onClick={handleMarkAllRead}
-                className="text-xs text-accent-blue hover:text-accent-purple"
+                onClick={() => setIsOpen(false)}
+                className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
               >
-                {t('notifications.mark_all_read')}
+                <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
-            )}
+            </div>
           </div>
-          {loading ? (
-            <div className="p-4 text-center text-text-muted">{t('notifications.loading')}</div>
-          ) : notifications.length === 0 ? (
-            <div className="p-4 text-center text-text-muted">{t('notifications.no_notifications')}</div>
-          ) : (
-            <ul className="divide-y divide-border">
-              {notifications.map((n) => (
-                <li key={n.id} className={`p-3 hover:bg-surfaceLight transition-colors ${!n.read ? 'bg-surfaceLight/50' : ''}`}>
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-text-primary font-medium">{n.title}</p>
-                      <p className="text-xs text-text-secondary truncate">{n.message}</p>
-                      <p className="text-xs text-text-muted mt-1">
-                        {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: ru })}
-                      </p>
-                      {n.link && (
+
+          {/* Список уведомлений */}
+          <div className="overflow-y-auto flex-1 p-2">
+            {loading ? (
+              <div className="flex justify-center items-center h-20">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+              </div>
+            ) : notifications.length === 0 ? (
+              <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+                {t('notifications.empty')}
+              </div>
+            ) : (
+              <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+                {notifications.map((notification) => (
+                  <li key={notification.id} className={`py-3 px-2 rounded-lg ${!notification.read ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {notification.title}
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 truncate">
+                          {notification.message}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-gray-400 dark:text-gray-500">
+                            {new Date(notification.created_at).toLocaleDateString('ru-RU', {
+                              day: 'numeric',
+                              month: 'short',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                          {!notification.read && (
+                            <button
+                              onClick={() => handleMarkAsRead(notification.id)}
+                              className="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400"
+                            >
+                              {t('notifications.mark_read')}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {notification.link && (
                         <Link
-                          to={n.link}
-                          className="text-xs text-accent-blue hover:text-accent-purple mt-1 inline-block"
-                          onClick={() => handleMarkAsRead(n.id)}
+                          to={notification.link}
+                          onClick={() => setIsOpen(false)}
+                          className="flex-shrink-0 text-blue-500 hover:text-blue-600 dark:text-blue-400"
                         >
-                          {t('notifications.go_to') || 'Перейти'}
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
                         </Link>
                       )}
                     </div>
-                    {!n.read && (
-                      <button
-                        onClick={() => handleMarkAsRead(n.id)}
-                        className="ml-2 text-xs text-text-muted hover:text-accent-blue"
-                      >
-                        ✓
-                      </button>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       )}
     </div>

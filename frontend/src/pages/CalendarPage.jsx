@@ -1,3 +1,4 @@
+// frontend/src/pages/CalendarPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +21,11 @@ const CalendarPage = () => {
   const [selectedMood, setSelectedMood] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [showPicker, setShowPicker] = useState(false);
+  
+  // Текущая дата — сегодня
+  const [currentDate, setCurrentDate] = useState(
+    new Date().toISOString().split('T')[0]
+  );
 
   const {
     pixels,
@@ -29,8 +35,9 @@ const CalendarPage = () => {
     createMood,
     handlePixelClick,
     clearSelected,
+    loadPixels,
   } = useCanvas({
-    date: new Date().toISOString().split('T')[0],
+    date: currentDate,
     calendarId: calendarId,
     autoLoad: true,
   });
@@ -50,7 +57,7 @@ const CalendarPage = () => {
     if (calendarId) {
       fetchCalendar();
     }
-  }, [calendarId]);
+  }, [calendarId, t]);
 
   const handleMoodSubmit = async (color, message, isAnonymous) => {
     if (!isAuthenticated) {
@@ -98,17 +105,17 @@ const CalendarPage = () => {
 
   if (loadingCalendar) {
     return (
-      <div className="flex justify-center items-center min-h-[50vh]">
-        <div className="w-8 h-8 border-4 border-accent-blue border-t-transparent rounded-full animate-spin" />
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   if (!calendar) {
     return (
-      <div className="text-center py-12">
-        <p className="text-text-secondary">{t('calendar.not_found') || 'Календарь не найден'}</p>
-        <Link to="/profile" className="text-accent-blue hover:text-accent-purple mt-4 inline-block">
+      <div className="max-w-4xl mx-auto px-4 py-6 text-center">
+        <p className="text-gray-600 dark:text-gray-400">{t('calendar.not_found') || 'Календарь не найден'}</p>
+        <Link to="/profile" className="text-blue-500 hover:text-blue-600 mt-4 inline-block">
           {t('calendar.back')}
         </Link>
       </div>
@@ -118,86 +125,108 @@ const CalendarPage = () => {
   const isOwner = user?.id === calendar.owner_id;
 
   return (
-    <div className="min-h-screen">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap items-center justify-between mb-4 gap-2">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-semibold text-text-primary break-words">{calendar.name}</h1>
-            {calendar.description && (
-              <p className="text-text-secondary text-sm break-all overflow-wrap-anywhere">{calendar.description}</p>
-            )}
-            <p className="text-xs text-text-muted mt-1">
-              {t('calendar.participants')}: {calendar.member_ids?.length || 1}
-              {isOwner && <span className="ml-2 text-accent-blue">({t('calendar.owner')})</span>}
-            </p>
-          </div>
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <Link
-              to="/profile"
-              className="text-sm text-text-muted hover:text-text-primary transition-colors"
+    <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          {calendar.name}
+        </h1>
+        <div className="flex items-center gap-3">
+          <Link
+            to="/profile"
+            className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+          >
+            ← {t('calendar.back')}
+          </Link>
+          {!isOwner && (
+            <button
+              onClick={handleLeaveCalendar}
+              className="text-sm text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"
             >
-              ← {t('calendar.back')}
-            </Link>
-            {!isOwner && (
-              <button
-                onClick={handleLeaveCalendar}
-                className="text-sm text-accent-red hover:text-red-400 transition-colors"
-              >
-                {t('calendar.leave')}
-              </button>
-            )}
-          </div>
+              {t('calendar.leave')}
+            </button>
+          )}
         </div>
+      </div>
 
-        <p className="text-center text-text-secondary text-sm mb-6">
-          {new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
-          {' · '}
-          {pixels.length} {t('home.pixels_today')}
-        </p>
+      {calendar.description && (
+        <p className="text-gray-600 dark:text-gray-400 mb-4">{calendar.description}</p>
+      )}
 
-        <div className="bg-surface rounded-xl p-2 sm:p-4 border border-border shadow-xl">
-        <CalendarCanvas
-          pixels={pixels}
-          width={600}
-          height={600}
-          onPixelClick={handlePixelSelect}
-          loading={loading}
-          interactive={true}
-          selectedPixelIndex={selectedIndex}
+      <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+        {t('calendar.participants')}: {calendar.member_ids?.length || 1}
+        {isOwner && ` (${t('calendar.owner')})`}
+      </div>
+
+      {/* Инпут для выбора даты (как на странице статистики) */}
+      <div className="mb-4">
+        <input
+          type="date"
+          className="bg-surface border border-border rounded-lg px-4 py-2 text-text-primary w-full sm:w-auto"
+          value={currentDate}
+          onChange={(e) => setCurrentDate(e.target.value)}
         />
-        </div>
+      </div>
 
-        {!myMood && isAuthenticated && !showPicker && (
-          <div className="mt-4 text-center text-text-secondary text-sm bg-surface/50 rounded-lg p-3 border border-border">
-            {t('home.click_to_leave')}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
           </div>
-        )}
+        ) : error ? (
+          <div className="text-center text-red-500 py-8">{error}</div>
+        ) : (
+          <>
+            <CalendarCanvas
+              pixels={pixels}
+              onPixelClick={handlePixelSelect}
+              myMood={myMood}
+              isAuthenticated={isAuthenticated}
+            />
+            
+            <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+              {new Date(currentDate).toLocaleDateString('ru-RU', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })} {' · '} {pixels.length} {t('home.pixels_today')}
+            </div>
 
-        {showPicker && (
-          <MoodPicker
-            onSubmit={handleMoodSubmit}
-            onCancel={() => { setShowPicker(false); clearSelected(); }}
-          />
-        )}
+            {!myMood && isAuthenticated && !showPicker && (
+              <div className="mt-4 text-center text-gray-500 dark:text-gray-400">
+                {t('home.click_to_leave')}
+              </div>
+            )}
 
-        {myMood && !showPicker && (
-          <div className="mt-4 text-center text-green-400 text-sm bg-surface/50 rounded-lg p-3 border border-border">
-            {t('calendar.already_left') || '✨ Ты уже оставил свой след в этом календаре сегодня'}
-          </div>
-        )}
+            {showPicker && (
+              <MoodPicker
+                onSubmit={handleMoodSubmit}
+                onCancel={() => {
+                  setShowPicker(false);
+                  clearSelected();
+                }}
+              />
+            )}
 
-        {!isAuthenticated && (
-          <div className="mt-4 text-center text-text-secondary text-sm bg-surface/50 rounded-lg p-3 border border-border">
-            {t('home.login_to_leave')}
-          </div>
-        )}
+            {myMood && !showPicker && (
+              <div className="mt-4 text-center text-green-600 dark:text-green-400">
+                {t('calendar.already_left') || '✨ Ты уже оставил свой след в этом календаре сегодня'}
+              </div>
+            )}
 
-        {selectedMood && (
-          <MoodCard
-            mood={selectedMood}
-            onClose={handleCloseMoodCard}
-            onReveal={() => toast.success('Автор раскрыт!')}
-          />
+            {!isAuthenticated && (
+              <div className="mt-4 text-center text-yellow-600 dark:text-yellow-400">
+                {t('home.login_to_leave')}
+              </div>
+            )}
+
+            {selectedMood && (
+              <MoodCard
+                mood={selectedMood}
+                onClose={handleCloseMoodCard}
+                onReactionUpdate={() => loadPixels()}
+              />
+            )}
+          </>
         )}
       </div>
     </div>

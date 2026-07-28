@@ -1,3 +1,4 @@
+// frontend/src/pages/Home.jsx
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCanvas } from '../components/calendarCanvas/useCanvas';
@@ -15,6 +16,11 @@ const Home = () => {
   const [selectedMood, setSelectedMood] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [showPicker, setShowPicker] = useState(false);
+  
+  // Текущая дата — сегодня
+  const [currentDate, setCurrentDate] = useState(
+    new Date().toISOString().split('T')[0]
+  );
 
   const {
     pixels,
@@ -24,8 +30,9 @@ const Home = () => {
     createMood,
     handlePixelClick,
     clearSelected,
+    loadPixels,
   } = useCanvas({
-    date: new Date().toISOString().split('T')[0],
+    date: currentDate,
     calendarId: null,
     autoLoad: true,
   });
@@ -74,58 +81,85 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-screen">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-2xl font-light text-center mb-2 tracking-wider">{t('home.title')}</h1>
-        <p className="text-center text-text-secondary text-sm mb-6">
-          {new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
-          {' · '}
-          {pixels.length} {t('home.pixels_today')}
-        </p>
+    <div className="max-w-4xl mx-auto px-4 py-6">
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+        {t('home.title')}
+      </h1>
 
-        <div className="bg-surface rounded-xl p-2 sm:p-4 border border-border shadow-xl">
-          <CalendarCanvas
-            pixels={pixels}
-            width={600}
-            height={600}
-            onPixelClick={handlePixelSelect}
-            loading={loading}
-            interactive={true}
-            selectedPixelIndex={selectedIndex}
-          />
-        </div>
+      {/* Инпут для выбора даты (как на странице статистики) */}
+      <div className="mb-4">
+        <input
+          type="date"
+          className="bg-surface border border-border rounded-lg px-4 py-2 text-text-primary w-full sm:w-auto"
+          value={currentDate}
+          onChange={(e) => setCurrentDate(e.target.value)}
+        />
+      </div>
 
-        {!myMood && isAuthenticated && !showPicker && (
-          <div className="mt-4 text-center text-text-secondary text-sm bg-surface/50 rounded-lg p-3 border border-border">
-            {t('home.click_to_leave')}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
           </div>
-        )}
+        ) : error ? (
+          <div className="text-center text-red-500 py-8">{error}</div>
+        ) : (
+          <>
+            <CalendarCanvas
+              pixels={pixels}
+              onPixelClick={handlePixelSelect}
+              myMood={myMood}
+              isAuthenticated={isAuthenticated}
+            />
+            
+            <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+              {new Date(currentDate).toLocaleDateString('ru-RU', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })} {' · '} {pixels.length} {t('home.pixels_today')}
+            </div>
 
-        {showPicker && (
-          <MoodPicker
-            onSubmit={handleMoodSubmit}
-            onCancel={() => { setShowPicker(false); clearSelected(); }}
-          />
-        )}
+            {!myMood && isAuthenticated && !showPicker && (
+              <div className="mt-4 text-center text-gray-500 dark:text-gray-400">
+                {t('home.click_to_leave')}
+              </div>
+            )}
 
-        {myMood && !showPicker && (
-          <div className="mt-4 text-center text-green-400 text-sm bg-surface/50 rounded-lg p-3 border border-border">
-            {t('home.already_left')}
-          </div>
-        )}
+            {showPicker && (
+              <MoodPicker
+                onSubmit={handleMoodSubmit}
+                onCancel={() => {
+                  setShowPicker(false);
+                  clearSelected();
+                }}
+              />
+            )}
 
-        {selectedMood && (
-          <MoodCard
-            mood={selectedMood}
-            onClose={handleCloseMoodCard}
-            onReveal={() => toast.success('Автор раскрыт!')}
-          />
-        )}
+            {myMood && !showPicker && (
+              <div className="mt-4 text-center text-green-600 dark:text-green-400">
+                {t('home.already_left') || '✨ Ты уже оставил свой след в этом календаре сегодня'}
+              </div>
+            )}
 
-        {showOnboarding && (
-          <Onboarding onComplete={handleOnboardingComplete} />
+            {!isAuthenticated && (
+              <div className="mt-4 text-center text-yellow-600 dark:text-yellow-400">
+                {t('home.login_to_leave')}
+              </div>
+            )}
+
+            {selectedMood && (
+              <MoodCard
+                mood={selectedMood}
+                onClose={handleCloseMoodCard}
+                onReactionUpdate={() => loadPixels()}
+              />
+            )}
+          </>
         )}
       </div>
+
+      {showOnboarding && <Onboarding onComplete={handleOnboardingComplete} />}
     </div>
   );
 };

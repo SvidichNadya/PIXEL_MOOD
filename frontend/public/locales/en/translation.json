@@ -94,13 +94,14 @@
     "donate": "Donate"
   },
   "stats": {
-    "title": "Statistics",
-    "total_pixels": "Total pixels",
-    "unique_colors": "Unique colors",
-    "top_authors": "Top authors",
-    "max_one": "Maximum by one",
-    "color_distribution": "Color distribution",
-    "no_data": "No data for this day"
+  "title": "Statistics",
+  "total_pixels": "Total pixels",
+  "unique_colors": "Unique colors",
+  "top_authors": "Top authors",
+  "max_one": "Maximum per author",
+  "color_distribution": "Color distribution",
+  "no_data": "No data for this day",
+  "pixels": "pixels"
   },
   "mood": {
     "pick_color": "Pick a mood color",
