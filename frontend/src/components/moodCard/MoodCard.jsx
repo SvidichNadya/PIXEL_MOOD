@@ -97,14 +97,14 @@ const MoodCard = ({
                 </span>
               )}
             </div>
-            {canReveal && (
+            {/* {canReveal && (
               <RevealButton
                 moodId={mood.id}
                 onSuccess={onReveal}
                 className="text-xs"
                 label={t('mood.reveal')}
               />
-            )}
+            )} */}
           </div>
 
           {mood.message && (

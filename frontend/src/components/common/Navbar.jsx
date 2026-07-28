@@ -49,24 +49,11 @@ const Navbar = () => {
           <div className="flex items-center justify-between h-16">
             {/* Логотип */}
             <Link to="/" className="flex items-center space-x-2">
-              <svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <rect width="100" height="100" fill="#151617" />
-
-              <rect x="21" y="15" width="22" height="22" rx="6" fill="#F0D1D1" class="anim-rect" style="transform-origin: 32px 26px; animation-delay: 0s;" />
-              
-              <rect x="45" y="15" width="10" height="10" rx="3" fill="#E8D5B5" class="anim-rect" style="transform-origin: 50px 20px; animation-delay: 0.15s;" />
-              <rect x="57" y="15" width="22" height="10" rx="4" fill="#B5C9D6" class="anim-rect" style="transform-origin: 68px 20px; animation-delay: 0.3s;" />
-              
-              <rect x="69" y="27" width="10" height="22" rx="4" fill="#C5D4B7" class="anim-rect" style="transform-origin: 74px 38px; animation-delay: 0.45s;" />
-              
-              <rect x="45" y="51" width="34" height="10" rx="4" fill="#EAC7A9" class="anim-rect" style="transform-origin: 62px 56px; animation-delay: 0.6s;" />
-              
-              <rect x="21" y="39" width="10" height="22" rx="4" fill="#BAC5CC" class="anim-rect" style="transform-origin: 26px 50px; animation-delay: 0.75s;" />
-              <rect x="33" y="39" width="10" height="10" rx="3" fill="#B5D0C5" class="anim-rect" style="transform-origin: 38px 44px; animation-delay: 0.9s;" />
-              <rect x="33" y="51" width="10" height="10" rx="3" fill="#C5BED6" class="anim-rect" style="transform-origin: 38px 56px; animation-delay: 1.05s;" />
-              
-              <rect x="21" y="63" width="22" height="22" rx="6" fill="#DBC6A1" class="anim-rect" style="transform-origin: 32px 74px; animation-delay: 1.2s;" />
-            </svg>
+                      <img
+                        src="/images/universal-icon-576.png"   // или /images/logo.png
+                        alt="Логотип"
+                        className="h-10 w-auto"   // задайте нужный размер
+                      />
               <span className="text-lg font-semibold text-text-primary hidden sm:block">
                 PIXEL Mood
               </span>

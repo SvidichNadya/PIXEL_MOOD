@@ -93,7 +93,7 @@ const Profile = () => {
         </div>
 
         <div className="mt-4 flex flex-wrap gap-3">
-          <DonateButton amount={50} label={t('profile.donate')} variant="primary" />
+          {/* <DonateButton amount={50} label={t('profile.donate')} variant="primary" /> */}
         </div>
         <div className="mt-4 flex flex-wrap gap-3">
             <button onClick={logout} className="btn-danger text-sm px-4 py-2">
