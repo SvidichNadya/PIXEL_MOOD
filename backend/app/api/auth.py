@@ -17,6 +17,7 @@ from app.config import settings
 router = APIRouter(prefix="/auth", tags=["auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
+
 # ============================================================
 # Модель для VK Bridge авторизации
 # ============================================================
@@ -30,6 +31,16 @@ class VKBridgeAuth(BaseModel):
 
 
 # ============================================================
+# Модель для обновления профиля
+# ============================================================
+class UserUpdate(BaseModel):
+    display_name: Optional[str] = None
+    is_anonymous_by_default: Optional[bool] = None
+    allow_paid_reveal: Optional[bool] = None
+    avatar_url: Optional[str] = None
+
+
+# ============================================================
 # Эндпоинт для входа по email и паролю
 # ============================================================
 @router.post("/login", response_model=Token)
@@ -37,10 +48,7 @@ async def login(
     payload: UserLogin,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Авторизация пользователя по email и паролю.
-    Возвращает JWT-токен.
-    """
+    """Авторизация пользователя по email и паролю. Возвращает JWT-токен."""
     service = AuthService(db)
     user = await service.authenticate_email(payload.email, payload.password)
     if not user:
@@ -59,10 +67,7 @@ async def register(
     payload: UserRegister,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Регистрация нового пользователя.
-    Возвращает JWT-токен.
-    """
+    """Регистрация нового пользователя. Возвращает JWT-токен."""
     service = AuthService(db)
     try:
         user = await service.register_email(payload)
@@ -82,19 +87,13 @@ async def auth_vk_bridge(
     payload: VKBridgeAuth,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Авторизация через VK Bridge для мобильного приложения VK.
-    Проверяет подпись sign, получает данные пользователя из VK API,
-    создаёт пользователя в БД и возвращает JWT-токен.
-    """
-    # 1. Проверка наличия секретного ключа
+    """Авторизация через VK Bridge для мобильного приложения VK."""
     if not settings.VK_SECRET:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="VK_SECRET не настроен на сервере"
         )
 
-    # 2. Собираем параметры для проверки подписи (без sign)
     params = payload.dict()
     sorted_params = sorted([
         (k, v) for k, v in params.items()
@@ -102,14 +101,12 @@ async def auth_vk_bridge(
     ])
     params_string = "&".join([f"{k}={v}" for k, v in sorted_params])
 
-    # 3. Вычисляем ожидаемую подпись
     expected_sign = hmac.new(
         key=bytes(settings.VK_SECRET, "utf-8"),
         msg=bytes(params_string, "utf-8"),
         digestmod=hashlib.sha256
     ).hexdigest()
 
-    # 4. Сравниваем подписи
     if payload.sign != expected_sign:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -117,13 +114,10 @@ async def auth_vk_bridge(
         )
 
     service = AuthService(db)
-
-    # 5. Ищем пользователя по VK ID
     user = await service.get_user_by_vk_id(str(payload.vk_user_id))
     if user:
         return service.create_token(user)
 
-    # 6. Если пользователь не найден — получаем данные из VK API
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.get(
@@ -152,7 +146,6 @@ async def auth_vk_bridge(
             detail=f"Ошибка получения данных из VK: {str(e)}"
         )
 
-    # 7. Создаём нового пользователя
     import secrets
     username = f"vk_{payload.vk_user_id}"
     display_name = f"{vk_user_data.get('first_name', '')} {vk_user_data.get('last_name', '')}".strip()
@@ -180,45 +173,62 @@ async def auth_vk_bridge(
 
 
 # ============================================================
-# Эндпоинт для получения данных текущего пользователя (защищённый)
+# Эндпоинт для получения данных текущего пользователя
 # ============================================================
 @router.get("/me", response_model=UserOut)
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Возвращает данные авторизованного пользователя.
-    Требуется JWT-токен в заголовке Authorization: Bearer <token>
-    """
+    """Возвращает данные авторизованного пользователя."""
     user = await AuthService.get_current_user(token, db)
     return user
 
 
 # ============================================================
-# Эндпоинт для выхода (удаление токена на клиенте)
+# ✅ НОВЫЙ ЭНДПОИНТ — обновление профиля пользователя
+# ============================================================
+@router.put("/me", response_model=UserOut)
+async def update_current_user(
+    payload: UserUpdate,
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db)
+):
+    """Обновляет данные авторизованного пользователя."""
+    user = await AuthService.get_current_user(token, db)
+    
+    if payload.display_name is not None:
+        user.display_name = payload.display_name
+    if payload.is_anonymous_by_default is not None:
+        user.is_anonymous_by_default = payload.is_anonymous_by_default
+    if payload.allow_paid_reveal is not None:
+        user.allow_paid_reveal = payload.allow_paid_reveal
+    if payload.avatar_url is not None:
+        user.avatar_url = payload.avatar_url
+    
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+# ============================================================
+# Эндпоинт для выхода
 # ============================================================
 @router.post("/logout")
 async def logout():
-    """
-    Выход из аккаунта.
-    Токен должен быть удалён на клиенте.
-    """
+    """Выход из аккаунта. Токен должен быть удалён на клиенте."""
     return {"detail": "OK"}
 
 
 # ============================================================
-# Эндпоинт для обновления JWT-токена (если нужен refresh)
+# Эндпоинт для обновления JWT-токена
 # ============================================================
 @router.post("/refresh", response_model=Token)
 async def refresh_token(
     refresh_token: str,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Обновление JWT-токена по refresh-токену.
-    (Пока не реализовано, можно добавить позже)
-    """
+    """Обновление JWT-токена по refresh-токену."""
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
         detail="Refresh token not implemented yet"
