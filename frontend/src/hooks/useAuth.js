@@ -1,10 +1,7 @@
+// frontend/src/hooks/useAuth.js
 import { useContext } from 'react';
-import { AuthContext } from '../contexts/AuthContext';
+import { AuthContext } from './AuthContext';
 
-/**
- * Хук для работы с аутентификацией
- * Использует контекст AuthContext
- */
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -12,5 +9,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-export default useAuth;
