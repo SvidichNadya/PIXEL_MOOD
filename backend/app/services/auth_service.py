@@ -7,12 +7,15 @@ import jwt
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from fastapi import HTTPException, status
+
 from app.models.user import User
 from app.schemas.auth import UserRegister
 from app.config import settings
 
 # Используем sha256_crypt вместо bcrypt — не требует внешних библиотек
 pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
+
 
 class AuthService:
     def __init__(self, db: AsyncSession):
@@ -73,24 +76,23 @@ class AuthService:
             vk_user = data["response"][0]
             vk_id = str(vk_user["id"])
 
-        stmt = select(User).where(User.vk_id == vk_id)
-        result = await self.db.execute(stmt)
-        user = result.scalar_one_or_none()
+            stmt = select(User).where(User.vk_id == vk_id)
+            result = await self.db.execute(stmt)
+            user = result.scalar_one_or_none()
 
-        if not user:
-            user = User(
-                username=f"vk_{vk_id}",
-                vk_id=vk_id,
-                display_name=vk_user.get("first_name", "") + " " + vk_user.get("last_name", ""),
-                avatar_url=vk_user.get("photo_50"),
-                consent_to_reveal_given_at=datetime.utcnow(),
-                allow_paid_reveal=True
-            )
-            self.db.add(user)
-            await self.db.commit()
-            await self.db.refresh(user)
-
-        return user
+            if not user:
+                user = User(
+                    username=f"vk_{vk_id}",
+                    vk_id=vk_id,
+                    display_name=vk_user.get("first_name", "") + " " + vk_user.get("last_name", ""),
+                    avatar_url=vk_user.get("photo_50"),
+                    consent_to_reveal_given_at=datetime.utcnow(),
+                    allow_paid_reveal=True
+                )
+                self.db.add(user)
+                await self.db.commit()
+                await self.db.refresh(user)
+            return user
 
     async def authenticate_telegram(self, init_data: str) -> User:
         if not settings.TG_BOT_SECRET:
@@ -103,7 +105,6 @@ class AuthService:
 
         sorted_params = sorted(params.items())
         data_check_string = "\n".join(f"{k}={v}" for k, v in sorted_params)
-
         secret_key = hashlib.sha256(settings.TG_BOT_SECRET.encode()).digest()
         computed_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
 
@@ -137,7 +138,6 @@ class AuthService:
             self.db.add(user)
             await self.db.commit()
             await self.db.refresh(user)
-
         return user
 
     def create_token(self, user: User) -> dict:
@@ -160,37 +160,58 @@ class AuthService:
         pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
         return pwd_context.hash(password)
 
-async def get_or_create_vk_user(self, vk_id: str) -> User:
-    stmt = select(User).where(User.vk_id == vk_id)
-    result = await self.db.execute(stmt)
-    user = result.scalar_one_or_none()
-    
-    if not user:
-        # Получаем данные пользователя через VK API
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                "https://api.vk.com/method/users.get",
-                params={
-                    "user_ids": vk_id,
-                    "v": "5.131",
-                    "fields": "photo_50"
-                }
+    # ============================================================
+    # НОВЫЙ МЕТОД — проверка JWT-токена и получение текущего пользователя
+    # ============================================================
+    @staticmethod
+    async def get_current_user(
+        token: str,
+        db: AsyncSession
+    ) -> User:
+        """
+        Проверяет JWT-токен и возвращает пользователя.
+        Используется в зависимостях FastAPI.
+        """
+        try:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            user_id = payload.get("sub")
+            if user_id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token"
+                )
+        except jwt.PyJWTError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token"
             )
-            data = resp.json()
-            if "error" in data:
-                raise ValueError("Failed to get VK user data")
-            vk_user = data["response"][0]
-        
-        user = User(
-            username=f"vk_{vk_id}",
-            vk_id=vk_id,
-            display_name=f"{vk_user.get('first_name', '')} {vk_user.get('last_name', '')}",
-            avatar_url=vk_user.get("photo_50"),
-            consent_to_reveal_given_at=datetime.utcnow(),
-            allow_paid_reveal=True,
-        )
-        self.db.add(user)
-        await self.db.commit()
-        await self.db.refresh(user)
-    
-    return user
+
+        # Преобразуем user_id обратно в UUID
+        try:
+            import uuid
+            user_uuid = uuid.UUID(user_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid user ID"
+            )
+
+        stmt = select(User).where(User.id == user_uuid)
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
+
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found"
+            )
+
+        return user
+
+    # ============================================================
+    # ДОПОЛНИТЕЛЬНЫЙ МЕТОД — поиск пользователя по VK ID
+    # ============================================================
+    async def get_user_by_vk_id(self, vk_id: str) -> Optional[User]:
+        stmt = select(User).where(User.vk_id == vk_id)
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
