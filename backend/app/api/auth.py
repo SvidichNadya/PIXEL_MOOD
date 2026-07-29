@@ -6,6 +6,7 @@ import hmac
 import hashlib
 import httpx
 from datetime import datetime
+from fastapi.security import OAuth2PasswordBearer
 
 from app.database import get_db
 from app.models.user import User
@@ -14,7 +15,11 @@ from app.schemas.auth import UserLogin, UserRegister, Token, UserOut
 from app.config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
+# ============================================================
+# Модель для VK Bridge авторизации
+# ============================================================
 class VKBridgeAuth(BaseModel):
     vk_user_id: int
     sign: str
@@ -24,13 +29,19 @@ class VKBridgeAuth(BaseModel):
     vk_viewer_id: Optional[int] = None
 
 
+# ============================================================
+# Эндпоинт для входа по email и паролю
+# ============================================================
 @router.post("/login", response_model=Token)
 async def login(
     payload: UserLogin,
     db: AsyncSession = Depends(get_db)
 ):
+    """
+    Авторизация пользователя по email и паролю.
+    Возвращает JWT-токен.
+    """
     service = AuthService(db)
-    # ✅ ИСПРАВЛЕНО: authenticate_user → authenticate_email
     user = await service.authenticate_email(payload.email, payload.password)
     if not user:
         raise HTTPException(
@@ -40,34 +51,50 @@ async def login(
     return service.create_token(user)
 
 
+# ============================================================
+# Эндпоинт для регистрации нового пользователя
+# ============================================================
 @router.post("/register", response_model=Token)
 async def register(
     payload: UserRegister,
     db: AsyncSession = Depends(get_db)
 ):
+    """
+    Регистрация нового пользователя.
+    Возвращает JWT-токен.
+    """
     service = AuthService(db)
-    # ✅ ИСПРАВЛЕНО: create_user → register_email
-    user = await service.register_email(payload)
-    if not user:
+    try:
+        user = await service.register_email(payload)
+    except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Пользователь с таким email или username уже существует",
+            detail=str(e)
         )
     return service.create_token(user)
 
 
+# ============================================================
+# Эндпоинт для авторизации через VK Bridge (мобильное приложение)
+# ============================================================
 @router.post("/vk-bridge", response_model=Token)
 async def auth_vk_bridge(
     payload: VKBridgeAuth,
     db: AsyncSession = Depends(get_db)
 ):
-    """Авторизация через VK Bridge (для мобильного приложения VK)."""
+    """
+    Авторизация через VK Bridge для мобильного приложения VK.
+    Проверяет подпись sign, получает данные пользователя из VK API,
+    создаёт пользователя в БД и возвращает JWT-токен.
+    """
+    # 1. Проверка наличия секретного ключа
     if not settings.VK_SECRET:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="VK_SECRET не настроен на сервере"
         )
 
+    # 2. Собираем параметры для проверки подписи (без sign)
     params = payload.dict()
     sorted_params = sorted([
         (k, v) for k, v in params.items()
@@ -75,12 +102,14 @@ async def auth_vk_bridge(
     ])
     params_string = "&".join([f"{k}={v}" for k, v in sorted_params])
 
+    # 3. Вычисляем ожидаемую подпись
     expected_sign = hmac.new(
         key=bytes(settings.VK_SECRET, "utf-8"),
         msg=bytes(params_string, "utf-8"),
         digestmod=hashlib.sha256
     ).hexdigest()
 
+    # 4. Сравниваем подписи
     if payload.sign != expected_sign:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -88,11 +117,13 @@ async def auth_vk_bridge(
         )
 
     service = AuthService(db)
+
+    # 5. Ищем пользователя по VK ID
     user = await service.get_user_by_vk_id(str(payload.vk_user_id))
     if user:
         return service.create_token(user)
 
-    # Получаем данные пользователя из VK API
+    # 6. Если пользователь не найден — получаем данные из VK API
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.get(
@@ -121,6 +152,7 @@ async def auth_vk_bridge(
             detail=f"Ошибка получения данных из VK: {str(e)}"
         )
 
+    # 7. Создаём нового пользователя
     import secrets
     username = f"vk_{payload.vk_user_id}"
     display_name = f"{vk_user_data.get('first_name', '')} {vk_user_data.get('last_name', '')}".strip()
@@ -147,18 +179,47 @@ async def auth_vk_bridge(
     return service.create_token(new_user)
 
 
-from fastapi.security import OAuth2PasswordBearer
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
-
+# ============================================================
+# Эндпоинт для получения данных текущего пользователя (защищённый)
+# ============================================================
 @router.get("/me", response_model=UserOut)
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db)
 ):
+    """
+    Возвращает данные авторизованного пользователя.
+    Требуется JWT-токен в заголовке Authorization: Bearer <token>
+    """
     user = await AuthService.get_current_user(token, db)
     return user
 
 
+# ============================================================
+# Эндпоинт для выхода (удаление токена на клиенте)
+# ============================================================
 @router.post("/logout")
 async def logout():
+    """
+    Выход из аккаунта.
+    Токен должен быть удалён на клиенте.
+    """
     return {"detail": "OK"}
+
+
+# ============================================================
+# Эндпоинт для обновления JWT-токена (если нужен refresh)
+# ============================================================
+@router.post("/refresh", response_model=Token)
+async def refresh_token(
+    refresh_token: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Обновление JWT-токена по refresh-токену.
+    (Пока не реализовано, можно добавить позже)
+    """
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Refresh token not implemented yet"
+    )

@@ -1,14 +1,20 @@
-// frontend/src/hooks/useAuth.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import client from '../api/client';
 import { ENDPOINTS } from '../api/endpoints';
 
+// ============================================================
+// Создание контекста
+// ============================================================
 const AuthContext = createContext(null);
 
+// ============================================================
+// Провайдер для оборачивания приложения
+// ============================================================
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Загрузка пользователя при старте, если есть токен
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (token) {
@@ -18,12 +24,14 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  // Функция для получения данных пользователя
   const fetchUser = async () => {
     try {
       const response = await client.get(ENDPOINTS.AUTH.ME);
       setUser(response.data);
     } catch (error) {
       console.error('Failed to fetch user:', error);
+      // Если токен невалидный — удаляем его
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
     } finally {
@@ -31,6 +39,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Функция входа
   const login = async (email, password) => {
     try {
       const response = await client.post(ENDPOINTS.AUTH.LOGIN, { email, password });
@@ -42,10 +51,14 @@ export const AuthProvider = ({ children }) => {
       setUser(userData);
       return { success: true, user: userData };
     } catch (error) {
-      return { success: false, error: error.response?.data?.detail || 'Ошибка входа' };
+      return {
+        success: false,
+        error: error.response?.data?.detail || 'Ошибка входа'
+      };
     }
   };
 
+  // Функция выхода
   const logout = async () => {
     try {
       await client.post(ENDPOINTS.AUTH.LOGOUT);
@@ -58,10 +71,12 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Функция обновления данных пользователя (например, после смены профиля)
   const updateUser = (data) => {
     setUser(prev => ({ ...prev, ...data }));
   };
 
+  // Значения, которые будут доступны через контекст
   const value = {
     user,
     loading,
@@ -71,10 +86,17 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!user,
   };
 
-  // ✅ ИСПРАВЛЕНО — возвращаем провайдер с контекстом
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  // ✅ Возвращаем провайдер с контекстом (это критически важно)
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
+// ============================================================
+// Хук для использования контекста в компонентах
+// ============================================================
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
