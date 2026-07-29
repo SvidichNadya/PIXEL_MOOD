@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from typing import Optional
 import hmac
 import hashlib
@@ -14,7 +14,6 @@ from app.schemas.auth import UserLogin, UserRegister, Token, UserOut
 from app.config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
 
 class VKBridgeAuth(BaseModel):
     vk_user_id: int
@@ -62,17 +61,13 @@ async def auth_vk_bridge(
     payload: VKBridgeAuth,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Авторизация через VK Bridge (для мобильного приложения VK).
-    Проверяет подпись и создаёт/обновляет пользователя.
-    """
+    """Авторизация через VK Bridge (для мобильного приложения VK)."""
     if not settings.VK_SECRET:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="VK_SECRET не настроен на сервере"
         )
 
-    # Проверка подписи
     params = payload.dict()
     sorted_params = sorted([
         (k, v) for k, v in params.items()
@@ -93,8 +88,6 @@ async def auth_vk_bridge(
         )
 
     service = AuthService(db)
-
-    # Проверяем, существует ли пользователь
     user = await service.get_user_by_vk_id(str(payload.vk_user_id))
     if user:
         return service.create_token(user)

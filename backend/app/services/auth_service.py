@@ -215,3 +215,58 @@ class AuthService:
         stmt = select(User).where(User.vk_id == vk_id)
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
+
+    # ============================================================
+    # НОВЫЙ МЕТОД — проверка JWT-токена и получение текущего пользователя
+    # ============================================================
+    @staticmethod
+    async def get_current_user(
+        token: str,
+        db: AsyncSession
+    ) -> User:
+        """
+        Проверяет JWT-токен и возвращает пользователя.
+        Используется в зависимостях FastAPI.
+        """
+        try:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            user_id = payload.get("sub")
+            if user_id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token"
+                )
+        except jwt.PyJWTError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token"
+            )
+
+        import uuid
+        try:
+            user_uuid = uuid.UUID(user_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid user ID"
+            )
+
+        stmt = select(User).where(User.id == user_uuid)
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
+
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found"
+            )
+
+        return user
+
+    # ============================================================
+    # ДОПОЛНИТЕЛЬНЫЙ МЕТОД — поиск пользователя по VK ID
+    # ============================================================
+    async def get_user_by_vk_id(self, vk_id: str) -> Optional[User]:
+        stmt = select(User).where(User.vk_id == vk_id)
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
