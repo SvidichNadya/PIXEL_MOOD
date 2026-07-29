@@ -1,4 +1,4 @@
-// frontend/src/hooks/useAuth.js
+// frontend/src/hooks/useAuth.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import client from '../api/client';
 import { ENDPOINTS } from '../api/endpoints';
