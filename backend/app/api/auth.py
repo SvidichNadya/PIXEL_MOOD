@@ -5,7 +5,7 @@ from typing import Optional
 import hmac
 import hashlib
 import httpx
-from datetime import datetime  # <-- ДОБАВЛЕН ИМПОРТ
+from datetime import datetime
 
 from app.database import get_db
 from app.models.user import User
@@ -31,6 +31,7 @@ async def login(
     db: AsyncSession = Depends(get_db)
 ):
     service = AuthService(db)
+    # ✅ ИСПРАВЛЕНО: authenticate_user → authenticate_email
     user = await service.authenticate_email(payload.email, payload.password)
     if not user:
         raise HTTPException(
@@ -46,6 +47,7 @@ async def register(
     db: AsyncSession = Depends(get_db)
 ):
     service = AuthService(db)
+    # ✅ ИСПРАВЛЕНО: create_user → register_email
     user = await service.register_email(payload)
     if not user:
         raise HTTPException(
@@ -64,14 +66,13 @@ async def auth_vk_bridge(
     Авторизация через VK Bridge (для мобильного приложения VK).
     Проверяет подпись и создаёт/обновляет пользователя.
     """
-    # 1. Проверка наличия секретного ключа
     if not settings.VK_SECRET:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="VK_SECRET не настроен на сервере"
         )
 
-    # 2. Собираем параметры для проверки подписи (без sign)
+    # Проверка подписи
     params = payload.dict()
     sorted_params = sorted([
         (k, v) for k, v in params.items()
@@ -79,7 +80,6 @@ async def auth_vk_bridge(
     ])
     params_string = "&".join([f"{k}={v}" for k, v in sorted_params])
 
-    # 3. Вычисляем ожидаемую подпись
     expected_sign = hmac.new(
         key=bytes(settings.VK_SECRET, "utf-8"),
         msg=bytes(params_string, "utf-8"),
@@ -92,14 +92,14 @@ async def auth_vk_bridge(
             detail="Неверная подпись VK"
         )
 
-    # 4. Получаем или создаём пользователя
     service = AuthService(db)
 
+    # Проверяем, существует ли пользователь
     user = await service.get_user_by_vk_id(str(payload.vk_user_id))
     if user:
         return service.create_token(user)
 
-    # 5. Если пользователь не найден, получаем его данные через VK API
+    # Получаем данные пользователя из VK API
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.get(
@@ -128,14 +128,11 @@ async def auth_vk_bridge(
             detail=f"Ошибка получения данных из VK: {str(e)}"
         )
 
-    # 6. Создаём нового пользователя
     import secrets
     username = f"vk_{payload.vk_user_id}"
     display_name = f"{vk_user_data.get('first_name', '')} {vk_user_data.get('last_name', '')}".strip()
     if not display_name:
         display_name = f"User {payload.vk_user_id}"
-
-    random_password = secrets.token_urlsafe(20)
 
     new_user = User(
         username=username,
@@ -143,7 +140,7 @@ async def auth_vk_bridge(
         display_name=display_name,
         vk_id=str(payload.vk_user_id),
         avatar_url=vk_user_data.get("photo_50"),
-        password_hash=AuthService.hash_password(random_password),
+        password_hash=AuthService.hash_password(secrets.token_urlsafe(20)),
         consent_to_reveal_given_at=datetime.utcnow(),
         allow_paid_reveal=True,
         is_anonymous_by_default=True,
@@ -157,60 +154,18 @@ async def auth_vk_bridge(
     return service.create_token(new_user)
 
 
-# ============================================================
-# Эндпоинты /me, /logout, /refresh с корректной зависимостью
-# ============================================================
-
-@router.get("/me", response_model=UserOut)
-async def get_current_user(
-    db: AsyncSession = Depends(get_db),
-    token: str = Depends(lambda: None)  # временно, нужно передавать токен через заголовок
-):
-    """
-    Возвращает данные текущего пользователя.
-    Токен должен быть передан в заголовке Authorization: Bearer <token>
-    """
-    # ВАЖНО: в реальном коде токен извлекается из заголовка.
-    # Здесь используется упрощённая версия — передавайте токен через Depends.
-    # Правильная реализация — через fastapi.security.OAuth2PasswordBearer.
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Используйте защищённый роут с Depends(AuthService.get_current_user_with_db)"
-    )
-
-
-# ВАЖНО: ЭТОТ ЭНДПОИНТ НУЖНО ПЕРЕПИСАТЬ, ИСПОЛЬЗУЯ fastapi.security
-# Ниже — правильная реализация с OAuth2PasswordBearer:
-
 from fastapi.security import OAuth2PasswordBearer
-
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 @router.get("/me", response_model=UserOut)
-async def get_current_user_secure(
+async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db)
 ):
-    """Возвращает данные текущего пользователя (защищённый эндпоинт)."""
     user = await AuthService.get_current_user(token, db)
     return user
 
 
 @router.post("/logout")
-async def logout(
-    current_user: User = Depends(lambda: None)  # временно
-):
-    # Для JWT logout просто удаляем токен на клиенте
+async def logout():
     return {"detail": "OK"}
-
-
-@router.post("/refresh", response_model=Token)
-async def refresh_token(
-    refresh_token: str,
-    db: AsyncSession = Depends(get_db)
-):
-    # Реализация обновления токена (если нужна)
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Refresh token not implemented yet"
-    )
