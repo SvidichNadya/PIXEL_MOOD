@@ -1,4 +1,3 @@
-// frontend/src/App.jsx
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -58,7 +57,7 @@ const App = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             
-            {/* Защищенные маршруты */}
+            {/* Защищённые маршруты */}
             <Route path="/" element={
               <PrivateRoute>
                 <Home />

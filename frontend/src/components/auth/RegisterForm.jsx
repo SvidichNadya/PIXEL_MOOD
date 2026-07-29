@@ -2,33 +2,29 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import client from '../../api/client';
 import { ENDPOINTS } from '../../api/endpoints';
 import { useAuth } from '../../hooks/useAuth';
 
-const registerSchema = z
-  .object({
-    username: z
-      .string()
-      .min(3, 'Имя пользователя должно содержать минимум 3 символа')
-      .max(32, 'Имя пользователя не должно превышать 32 символа')
-      .regex(/^[a-zA-Z0-9_\-]+$/, 'Допустимы только буквы, цифры, underscore и дефис'),
-    email: z.string().email('Введите корректный email'),
-    display_name: z.string().max(64, 'Отображаемое имя не должно превышать 64 символа').optional(),
-    password: z
-      .string()
-      .min(6, 'Пароль должен содержать минимум 6 символов')
-      .max(64, 'Пароль не должен превышать 64 символа'),
-    confirm_password: z.string().min(6, 'Подтвердите пароль'),
-    consent_to_reveal: z.boolean().default(true),
-  })
-  .refine((data) => data.password === data.confirm_password, {
-    message: 'Пароли не совпадают',
-    path: ['confirm_password'],
-  });
+const registerSchema = z.object({
+  username: z.string()
+    .min(3, 'Имя пользователя должно содержать минимум 3 символа')
+    .max(32, 'Имя пользователя не должно превышать 32 символа')
+    .regex(/^[a-zA-Z0-9_\-]+$/, 'Допустимы только буквы, цифры, underscore и дефис'),
+  email: z.string().email('Введите корректный email'),
+  display_name: z.string().max(64, 'Отображаемое имя не должно превышать 64 символа').optional(),
+  password: z.string()
+    .min(6, 'Пароль должен содержать минимум 6 символов')
+    .max(64, 'Пароль не должен превышать 64 символа'),
+  confirm_password: z.string().min(6, 'Подтвердите пароль'),
+  consent_to_reveal: z.boolean().default(true),
+}).refine((data) => data.password === data.confirm_password, {
+  message: 'Пароли не совпадают',
+  path: ['confirm_password'],
+});
 
 const RegisterForm = () => {
   const { t } = useTranslation();
@@ -53,9 +49,11 @@ const RegisterForm = () => {
       const { confirm_password, ...payload } = data;
       const response = await client.post(ENDPOINTS.AUTH.REGISTER, payload);
       const { access_token, refresh_token, expires_at } = response.data;
+
       localStorage.setItem('access_token', access_token);
       if (refresh_token) localStorage.setItem('refresh_token', refresh_token);
       if (expires_at) localStorage.setItem('expires_at', expires_at);
+
       await login();
       toast.success(t('auth.register.success') || 'Регистрация успешна! Добро пожаловать в PIXEL Mood.');
       navigate('/');
@@ -68,108 +66,102 @@ const RegisterForm = () => {
   };
 
   return (
-    <div className="w-full max-w-md">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+    <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6">
+      <div className="rounded-md shadow-sm -space-y-px">
         <div>
-          <label htmlFor="username" className="block text-sm font-medium text-text-secondary mb-1">
-            {t('auth.register.username')} <span className="text-accent-red">*</span>
-          </label>
+          <label htmlFor="username" className="sr-only">{t('auth.register.username') || 'Имя пользователя'}</label>
           <input
+            {...register('username')}
             id="username"
             type="text"
-            placeholder={t('auth.register.username_placeholder')}
-            className={`w-full ${errors.username ? 'input-error' : ''}`}
-            {...register('username')}
-            disabled={isLoading}
+            autoComplete="username"
+            className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm bg-white dark:bg-gray-800"
+            placeholder={t('auth.register.username') || 'Имя пользователя'}
           />
-          {errors.username && <p className="error-text">{errors.username.message}</p>}
+          {errors.username && (
+            <p className="mt-1 text-sm text-red-500">{errors.username.message}</p>
+          )}
         </div>
-
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-text-secondary mb-1">
-            {t('auth.register.email')} <span className="text-accent-red">*</span>
-          </label>
+          <label htmlFor="email" className="sr-only">Email</label>
           <input
+            {...register('email')}
             id="email"
             type="email"
-            placeholder={t('auth.register.email_placeholder')}
-            className={`w-full ${errors.email ? 'input-error' : ''}`}
-            {...register('email')}
-            disabled={isLoading}
+            autoComplete="email"
+            className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm bg-white dark:bg-gray-800"
+            placeholder="Email"
           />
-          {errors.email && <p className="error-text">{errors.email.message}</p>}
+          {errors.email && (
+            <p className="mt-1 text-sm text-red-500">{errors.email.message}</p>
+          )}
         </div>
-
         <div>
-          <label htmlFor="display_name" className="block text-sm font-medium text-text-secondary mb-1">
-            {t('auth.register.display_name')}
-          </label>
+          <label htmlFor="display_name" className="sr-only">{t('auth.register.display_name') || 'Отображаемое имя'}</label>
           <input
+            {...register('display_name')}
             id="display_name"
             type="text"
-            placeholder={t('auth.register.display_name_placeholder')}
-            className={`w-full ${errors.display_name ? 'input-error' : ''}`}
-            {...register('display_name')}
-            disabled={isLoading}
+            autoComplete="name"
+            className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm bg-white dark:bg-gray-800"
+            placeholder={t('auth.register.display_name') || 'Отображаемое имя (необязательно)'}
           />
-          {errors.display_name && <p className="error-text">{errors.display_name.message}</p>}
-          <p className="text-xs text-text-muted mt-1">{t('auth.register.display_name_hint') || 'Если не указано, будет использовано имя пользователя'}</p>
+          {errors.display_name && (
+            <p className="mt-1 text-sm text-red-500">{errors.display_name.message}</p>
+          )}
         </div>
-
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-text-secondary mb-1">
-            {t('auth.register.password')} <span className="text-accent-red">*</span>
-          </label>
+          <label htmlFor="password" className="sr-only">{t('auth.register.password') || 'Пароль'}</label>
           <input
+            {...register('password')}
             id="password"
             type="password"
-            placeholder={t('auth.register.password_placeholder')}
-            className={`w-full ${errors.password ? 'input-error' : ''}`}
-            {...register('password')}
-            disabled={isLoading}
+            autoComplete="new-password"
+            className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm bg-white dark:bg-gray-800"
+            placeholder={t('auth.register.password') || 'Пароль'}
           />
-          {errors.password && <p className="error-text">{errors.password.message}</p>}
+          {errors.password && (
+            <p className="mt-1 text-sm text-red-500">{errors.password.message}</p>
+          )}
         </div>
-
         <div>
-          <label htmlFor="confirm_password" className="block text-sm font-medium text-text-secondary mb-1">
-            {t('auth.register.confirm_password')} <span className="text-accent-red">*</span>
-          </label>
+          <label htmlFor="confirm_password" className="sr-only">{t('auth.register.confirm_password') || 'Подтвердите пароль'}</label>
           <input
+            {...register('confirm_password')}
             id="confirm_password"
             type="password"
-            placeholder={t('auth.register.confirm_password_placeholder')}
-            className={`w-full ${errors.confirm_password ? 'input-error' : ''}`}
-            {...register('confirm_password')}
-            disabled={isLoading}
+            autoComplete="new-password"
+            className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm bg-white dark:bg-gray-800"
+            placeholder={t('auth.register.confirm_password') || 'Подтвердите пароль'}
           />
-          {errors.confirm_password && <p className="error-text">{errors.confirm_password.message}</p>}
-        </div>
-
-        {errors.consent_to_reveal && <p className="error-text">{errors.consent_to_reveal.message}</p>}
-
-        <button type="submit" className="btn-primary w-full" disabled={isLoading}>
-          {isLoading ? (
-            <span className="flex items-center justify-center">
-              <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              {t('auth.register.submit')}...
-            </span>
-          ) : (
-            t('auth.register.submit')
+          {errors.confirm_password && (
+            <p className="mt-1 text-sm text-red-500">{errors.confirm_password.message}</p>
           )}
-        </button>
-
-        <div className="text-center text-sm text-text-secondary">
-          {t('auth.register.have_account')}{' '}
-          <Link to="/login" className="text-accent-blue hover:text-accent-purple font-medium">
-            {t('auth.register.login_link')}
-          </Link>
         </div>
-      </form>
-    </div>
+      </div>
+
+      <div className="flex items-center">
+        <input
+          {...register('consent_to_reveal')}
+          id="consent_to_reveal"
+          type="checkbox"
+          className="h-4 w-4 text-blue-500 focus:ring-blue-500 border-gray-300 rounded"
+        />
+        <label htmlFor="consent_to_reveal" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+          {t('auth.register.consent_to_reveal') || 'Я согласен, что мои пиксели могут быть раскрыты за плату'}
+        </label>
+      </div>
+
+      <div>
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isLoading ? 'Регистрация...' : 'Зарегистрироваться'}
+        </button>
+      </div>
+    </form>
   );
 };
 
