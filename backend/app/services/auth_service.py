@@ -159,3 +159,38 @@ class AuthService:
         from passlib.context import CryptContext
         pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
         return pwd_context.hash(password)
+
+async def get_or_create_vk_user(self, vk_id: str) -> User:
+    stmt = select(User).where(User.vk_id == vk_id)
+    result = await self.db.execute(stmt)
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        # Получаем данные пользователя через VK API
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                "https://api.vk.com/method/users.get",
+                params={
+                    "user_ids": vk_id,
+                    "v": "5.131",
+                    "fields": "photo_50"
+                }
+            )
+            data = resp.json()
+            if "error" in data:
+                raise ValueError("Failed to get VK user data")
+            vk_user = data["response"][0]
+        
+        user = User(
+            username=f"vk_{vk_id}",
+            vk_id=vk_id,
+            display_name=f"{vk_user.get('first_name', '')} {vk_user.get('last_name', '')}",
+            avatar_url=vk_user.get("photo_50"),
+            consent_to_reveal_given_at=datetime.utcnow(),
+            allow_paid_reveal=True,
+        )
+        self.db.add(user)
+        await self.db.commit()
+        await self.db.refresh(user)
+    
+    return user

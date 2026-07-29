@@ -71,6 +71,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!user,
   };
 
+  // ✅ ИСПРАВЛЕНО — возвращаем провайдер с контекстом
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
