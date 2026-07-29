@@ -9,7 +9,7 @@ import Register from './pages/Register';
 import Profile from './pages/Profile';
 import CalendarPage from './pages/CalendarPage';
 import StatsPage from './pages/StatsPage';
-import AdminPanel from './pages/AdminPanel';
+import AdminPanel from './pages/AdminPanel'; // <-- импорт добавлен
 import SupportPage from './pages/SupportPage';
 import PrivateRoute from './components/common/PrivateRoute';
 import { AuthProvider } from './hooks/useAuth';
@@ -24,7 +24,6 @@ const App = () => {
     const handleUpdateConfig = (event) => {
       if (event.detail?.scheme) {
         setTheme(event.detail.scheme);
-        // Применяем тему к документу
         document.documentElement.className = event.detail.scheme === 'space_gray' 
           ? 'dark' 
           : '';
