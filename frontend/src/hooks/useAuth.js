@@ -1,6 +1,6 @@
 // frontend/src/hooks/useAuth.js
 import { useContext } from 'react';
-import { AuthContext } from './AuthContext';
+import { AuthContext, AuthProvider } from './AuthContext';
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -9,3 +9,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+export { AuthProvider };
