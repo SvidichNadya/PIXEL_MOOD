@@ -85,14 +85,6 @@ const Home = () => {
           {t('home.title')}
         </h1>
 
-        <div className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-          {new Date(currentDate).toLocaleDateString('ru-RU', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-          })}
-        </div>
-
         <div className="w-full sm:w-auto">
           <input
             type="date"
@@ -118,10 +110,6 @@ const Home = () => {
               myMood={myMood}
               isAuthenticated={isAuthenticated}
             />
-
-            <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-              {pixels.length} {t('home.pixels_today')}
-            </div>
 
             {!myMood && isAuthenticated && !showPicker && (
               <div className="mt-4 text-center text-gray-500 dark:text-gray-400">
