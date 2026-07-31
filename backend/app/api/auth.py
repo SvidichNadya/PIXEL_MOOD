@@ -18,6 +18,7 @@ from app.config import settings
 router = APIRouter(prefix="/auth", tags=["auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
+
 class VKBridgeAuth(BaseModel):
     vk_user_id: int
     sign: str
@@ -26,11 +27,14 @@ class VKBridgeAuth(BaseModel):
     vk_is_app_user: Optional[int] = None
     vk_viewer_id: Optional[int] = None
 
+
 class UserUpdate(BaseModel):
     display_name: Optional[str] = None
     is_anonymous_by_default: Optional[bool] = None
     allow_paid_reveal: Optional[bool] = None
     avatar_url: Optional[str] = None
+    onboarding_completed: Optional[bool] = None  # ✅ добавлено
+
 
 @router.post("/login", response_model=Token)
 async def login(payload: UserLogin, db: AsyncSession = Depends(get_db)):
@@ -45,6 +49,7 @@ async def login(payload: UserLogin, db: AsyncSession = Depends(get_db)):
     token_data["user"] = UserOut.model_validate(user)
     return token_data
 
+
 @router.post("/register", response_model=Token)
 async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)):
     service = AuthService(db)
@@ -56,6 +61,7 @@ async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)):
     token_data["user"] = UserOut.model_validate(user)
     return token_data
 
+
 async def _handle_vk_auth(payload: VKBridgeAuth, db: AsyncSession) -> dict:
     if not settings.VK_SECRET:
         raise HTTPException(
@@ -63,7 +69,6 @@ async def _handle_vk_auth(payload: VKBridgeAuth, db: AsyncSession) -> dict:
             detail="VK_SECRET не настроен на сервере",
         )
 
-    # Простая проверка подписи (для production лучше расширить список параметров)
     params = payload.model_dump()
     sorted_params = sorted(
         [(k, v) for k, v in params.items() if k in ("vk_user_id", "vk_ts") and v is not None]
@@ -87,7 +92,6 @@ async def _handle_vk_auth(payload: VKBridgeAuth, db: AsyncSession) -> dict:
         token_data["user"] = UserOut.model_validate(user)
         return token_data
 
-    # Создаём нового пользователя
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.get(
@@ -106,7 +110,10 @@ async def _handle_vk_auth(payload: VKBridgeAuth, db: AsyncSession) -> dict:
                 )
             vk_user_data = data["response"][0] if data.get("response") else None
             if not vk_user_data:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь VK не найден")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Пользователь VK не найден",
+                )
     except HTTPException:
         raise
     except Exception as e:
@@ -139,14 +146,17 @@ async def _handle_vk_auth(payload: VKBridgeAuth, db: AsyncSession) -> dict:
     token_data["user"] = UserOut.model_validate(new_user)
     return token_data
 
+
 @router.post("/vk", response_model=Token)
 async def auth_vk(payload: VKBridgeAuth, db: AsyncSession = Depends(get_db)):
-    """Алиас для совместимости с ENDPOINTS.AUTH.VK"""
+    """Алиас для совместимости с фронтом"""
     return await _handle_vk_auth(payload, db)
+
 
 @router.post("/vk-bridge", response_model=Token)
 async def auth_vk_bridge(payload: VKBridgeAuth, db: AsyncSession = Depends(get_db)):
     return await _handle_vk_auth(payload, db)
+
 
 @router.get("/me", response_model=UserOut)
 async def get_current_user(
@@ -154,6 +164,7 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db),
 ):
     return await AuthService.get_current_user(token, db)
+
 
 @router.put("/me", response_model=UserOut)
 async def update_current_user(
@@ -171,14 +182,18 @@ async def update_current_user(
         user.allow_paid_reveal = payload.allow_paid_reveal
     if payload.avatar_url is not None:
         user.avatar_url = payload.avatar_url
+    if payload.onboarding_completed is not None:  # ✅ сохраняем флаг
+        user.onboarding_completed = payload.onboarding_completed
 
     await db.commit()
     await db.refresh(user)
     return user
 
+
 @router.post("/logout")
 async def logout():
     return {"detail": "OK"}
+
 
 @router.post("/refresh", response_model=Token)
 async def refresh_token(refresh_token: str, db: AsyncSession = Depends(get_db)):
