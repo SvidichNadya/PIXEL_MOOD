@@ -1,20 +1,30 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import client from '../api/client';
 import { ENDPOINTS } from '../api/endpoints';
 
-// ============================================================
-// Создание контекста
-// ============================================================
 const AuthContext = createContext(null);
 
-// ============================================================
-// Провайдер для оборачивания приложения
-// ============================================================
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Загрузка пользователя при старте, если есть токен
+  const fetchUser = useCallback(async () => {
+    try {
+      const response = await client.get(ENDPOINTS.AUTH.ME);
+      setUser(response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch user:', error);
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('expires_at');
+      setUser(null);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (token) {
@@ -22,43 +32,34 @@ export const AuthProvider = ({ children }) => {
     } else {
       setLoading(false);
     }
-  }, []);
+  }, [fetchUser]);
 
-  // Функция для получения данных пользователя
-  const fetchUser = async () => {
-    try {
-      const response = await client.get(ENDPOINTS.AUTH.ME);
-      setUser(response.data);
-    } catch (error) {
-      console.error('Failed to fetch user:', error);
-      // Если токен невалидный — удаляем его
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Функция входа
   const login = async (email, password) => {
     try {
       const response = await client.post(ENDPOINTS.AUTH.LOGIN, { email, password });
-      const { access_token, refresh_token, user: userData } = response.data;
+      const { access_token, refresh_token, expires_at, user: userFromResponse } = response.data;
+
       localStorage.setItem('access_token', access_token);
-      if (refresh_token) {
-        localStorage.setItem('refresh_token', refresh_token);
+      if (refresh_token) localStorage.setItem('refresh_token', refresh_token);
+      if (expires_at) localStorage.setItem('expires_at', expires_at);
+
+      // Если бэкенд уже вернул user — используем его, иначе подгружаем
+      if (userFromResponse) {
+        setUser(userFromResponse);
+        setLoading(false);
+        return { success: true, user: userFromResponse };
       }
-      setUser(userData);
-      return { success: true, user: userData };
+
+      const fetchedUser = await fetchUser();
+      return { success: true, user: fetchedUser };
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.detail || 'Ошибка входа'
+        error: error.response?.data?.detail || 'Ошибка входа',
       };
     }
   };
 
-  // Функция выхода
   const logout = async () => {
     try {
       await client.post(ENDPOINTS.AUTH.LOGOUT);
@@ -67,36 +68,28 @@ export const AuthProvider = ({ children }) => {
     } finally {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
+      localStorage.removeItem('expires_at');
       setUser(null);
     }
   };
 
-  // Функция обновления данных пользователя (например, после смены профиля)
   const updateUser = (data) => {
-    setUser(prev => ({ ...prev, ...data }));
+    setUser((prev) => (prev ? { ...prev, ...data } : data));
   };
 
-  // Значения, которые будут доступны через контекст
   const value = {
     user,
     loading,
     login,
     logout,
     updateUser,
+    fetchUser,
     isAuthenticated: !!user,
   };
 
-  // ✅ Возвращаем провайдер с контекстом (это критически важно)
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// ============================================================
-// Хук для использования контекста в компонентах
-// ============================================================
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

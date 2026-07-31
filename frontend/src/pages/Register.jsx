@@ -15,12 +15,12 @@ const Register = () => {
     consent_to_reveal: true,
   });
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { fetchUser } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
@@ -32,24 +32,37 @@ const Register = () => {
       toast.error('Пароли не совпадают');
       return;
     }
+
     setLoading(true);
     try {
       const payload = {
         username: formData.username,
         email: formData.email,
-        display_name: formData.display_name,
+        display_name: formData.display_name || undefined,
         password: formData.password,
         consent_to_reveal: formData.consent_to_reveal,
       };
+
       const response = await client.post(ENDPOINTS.AUTH.REGISTER, payload);
-      const { access_token, refresh_token } = response.data;
+      const { access_token, refresh_token, expires_at, user: userFromResponse } = response.data;
+
       localStorage.setItem('access_token', access_token);
       if (refresh_token) localStorage.setItem('refresh_token', refresh_token);
-      await login();
+      if (expires_at) localStorage.setItem('expires_at', expires_at);
+
+      // Если бэкенд вернул user — отлично, иначе подгружаем
+      if (userFromResponse) {
+        // setUser уже произойдёт через контекст при следующем рендере, но для надёжности:
+        await fetchUser();
+      } else {
+        await fetchUser();
+      }
+
       toast.success('Регистрация успешна!');
       navigate('/');
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Ошибка регистрации');
+      const detail = error.response?.data?.detail;
+      toast.error(typeof detail === 'string' ? detail : 'Ошибка регистрации');
     } finally {
       setLoading(false);
     }
@@ -69,6 +82,7 @@ const Register = () => {
             </Link>
           </p>
         </div>
+
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>

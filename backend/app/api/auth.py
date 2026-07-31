@@ -5,6 +5,7 @@ from typing import Optional
 import hmac
 import hashlib
 import httpx
+import secrets
 from datetime import datetime
 from fastapi.security import OAuth2PasswordBearer
 
@@ -17,10 +18,6 @@ from app.config import settings
 router = APIRouter(prefix="/auth", tags=["auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
-
-# ============================================================
-# Модель для VK Bridge авторизации
-# ============================================================
 class VKBridgeAuth(BaseModel):
     vk_user_id: int
     sign: str
@@ -29,26 +26,14 @@ class VKBridgeAuth(BaseModel):
     vk_is_app_user: Optional[int] = None
     vk_viewer_id: Optional[int] = None
 
-
-# ============================================================
-# Модель для обновления профиля
-# ============================================================
 class UserUpdate(BaseModel):
     display_name: Optional[str] = None
     is_anonymous_by_default: Optional[bool] = None
     allow_paid_reveal: Optional[bool] = None
     avatar_url: Optional[str] = None
 
-
-# ============================================================
-# Эндпоинт для входа по email и паролю
-# ============================================================
 @router.post("/login", response_model=Token)
-async def login(
-    payload: UserLogin,
-    db: AsyncSession = Depends(get_db)
-):
-    """Авторизация пользователя по email и паролю. Возвращает JWT-токен."""
+async def login(payload: UserLogin, db: AsyncSession = Depends(get_db)):
     service = AuthService(db)
     user = await service.authenticate_email(payload.email, payload.password)
     if not user:
@@ -56,68 +41,53 @@ async def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Неверный email или пароль",
         )
-    return service.create_token(user)
+    token_data = service.create_token(user)
+    token_data["user"] = UserOut.model_validate(user)
+    return token_data
 
-
-# ============================================================
-# Эндпоинт для регистрации нового пользователя
-# ============================================================
 @router.post("/register", response_model=Token)
-async def register(
-    payload: UserRegister,
-    db: AsyncSession = Depends(get_db)
-):
-    """Регистрация нового пользователя. Возвращает JWT-токен."""
+async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)):
     service = AuthService(db)
     try:
         user = await service.register_email(payload)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-    return service.create_token(user)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    token_data = service.create_token(user)
+    token_data["user"] = UserOut.model_validate(user)
+    return token_data
 
-
-# ============================================================
-# Эндпоинт для авторизации через VK Bridge (мобильное приложение)
-# ============================================================
-@router.post("/vk-bridge", response_model=Token)
-async def auth_vk_bridge(
-    payload: VKBridgeAuth,
-    db: AsyncSession = Depends(get_db)
-):
-    """Авторизация через VK Bridge для мобильного приложения VK."""
+async def _handle_vk_auth(payload: VKBridgeAuth, db: AsyncSession) -> dict:
     if not settings.VK_SECRET:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="VK_SECRET не настроен на сервере"
+            detail="VK_SECRET не настроен на сервере",
         )
 
-    params = payload.dict()
-    sorted_params = sorted([
-        (k, v) for k, v in params.items()
-        if k in ('vk_user_id', 'vk_ts') and v is not None
-    ])
+    # Простая проверка подписи (для production лучше расширить список параметров)
+    params = payload.model_dump()
+    sorted_params = sorted(
+        [(k, v) for k, v in params.items() if k in ("vk_user_id", "vk_ts") and v is not None]
+    )
     params_string = "&".join([f"{k}={v}" for k, v in sorted_params])
 
     expected_sign = hmac.new(
-        key=bytes(settings.VK_SECRET, "utf-8"),
-        msg=bytes(params_string, "utf-8"),
-        digestmod=hashlib.sha256
+        key=settings.VK_SECRET.encode("utf-8"),
+        msg=params_string.encode("utf-8"),
+        digestmod=hashlib.sha256,
     ).hexdigest()
 
     if payload.sign != expected_sign:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Неверная подпись VK"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверная подпись VK")
 
     service = AuthService(db)
     user = await service.get_user_by_vk_id(str(payload.vk_user_id))
-    if user:
-        return service.create_token(user)
 
+    if user:
+        token_data = service.create_token(user)
+        token_data["user"] = UserOut.model_validate(user)
+        return token_data
+
+    # Создаём нового пользователя
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.get(
@@ -125,35 +95,32 @@ async def auth_vk_bridge(
                 params={
                     "user_ids": payload.vk_user_id,
                     "v": "5.131",
-                    "fields": "photo_50,first_name,last_name"
-                }
+                    "fields": "photo_50,first_name,last_name",
+                },
             )
             data = resp.json()
             if "error" in data:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Ошибка VK API: {data['error']['error_msg']}"
+                    detail=f"Ошибка VK API: {data['error']['error_msg']}",
                 )
             vk_user_data = data["response"][0] if data.get("response") else None
             if not vk_user_data:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Пользователь VK не найден"
-                )
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь VK не найден")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Ошибка получения данных из VK: {str(e)}"
+            detail=f"Ошибка получения данных из VK: {str(e)}",
         )
 
-    import secrets
-    username = f"vk_{payload.vk_user_id}"
     display_name = f"{vk_user_data.get('first_name', '')} {vk_user_data.get('last_name', '')}".strip()
     if not display_name:
         display_name = f"User {payload.vk_user_id}"
 
     new_user = User(
-        username=username,
+        username=f"vk_{payload.vk_user_id}",
         email=f"{payload.vk_user_id}@vk.com",
         display_name=display_name,
         vk_id=str(payload.vk_user_id),
@@ -164,39 +131,38 @@ async def auth_vk_bridge(
         is_anonymous_by_default=True,
         onboarding_completed=False,
     )
-
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
 
-    return service.create_token(new_user)
+    token_data = service.create_token(new_user)
+    token_data["user"] = UserOut.model_validate(new_user)
+    return token_data
 
+@router.post("/vk", response_model=Token)
+async def auth_vk(payload: VKBridgeAuth, db: AsyncSession = Depends(get_db)):
+    """Алиас для совместимости с ENDPOINTS.AUTH.VK"""
+    return await _handle_vk_auth(payload, db)
 
-# ============================================================
-# Эндпоинт для получения данных текущего пользователя
-# ============================================================
+@router.post("/vk-bridge", response_model=Token)
+async def auth_vk_bridge(payload: VKBridgeAuth, db: AsyncSession = Depends(get_db)):
+    return await _handle_vk_auth(payload, db)
+
 @router.get("/me", response_model=UserOut)
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
-    """Возвращает данные авторизованного пользователя."""
-    user = await AuthService.get_current_user(token, db)
-    return user
+    return await AuthService.get_current_user(token, db)
 
-
-# ============================================================
-# ✅ НОВЫЙ ЭНДПОИНТ — обновление профиля пользователя
-# ============================================================
 @router.put("/me", response_model=UserOut)
 async def update_current_user(
     payload: UserUpdate,
     token: str = Depends(oauth2_scheme),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
-    """Обновляет данные авторизованного пользователя."""
     user = await AuthService.get_current_user(token, db)
-    
+
     if payload.display_name is not None:
         user.display_name = payload.display_name
     if payload.is_anonymous_by_default is not None:
@@ -205,31 +171,18 @@ async def update_current_user(
         user.allow_paid_reveal = payload.allow_paid_reveal
     if payload.avatar_url is not None:
         user.avatar_url = payload.avatar_url
-    
+
     await db.commit()
     await db.refresh(user)
     return user
 
-
-# ============================================================
-# Эндпоинт для выхода
-# ============================================================
 @router.post("/logout")
 async def logout():
-    """Выход из аккаунта. Токен должен быть удалён на клиенте."""
     return {"detail": "OK"}
 
-
-# ============================================================
-# Эндпоинт для обновления JWT-токена
-# ============================================================
 @router.post("/refresh", response_model=Token)
-async def refresh_token(
-    refresh_token: str,
-    db: AsyncSession = Depends(get_db)
-):
-    """Обновление JWT-токена по refresh-токену."""
+async def refresh_token(refresh_token: str, db: AsyncSession = Depends(get_db)):
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Refresh token not implemented yet"
+        detail="Refresh token not implemented yet",
     )
