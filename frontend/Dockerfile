@@ -21,6 +21,9 @@ RUN npm run build
 # ---- Этап раздачи статики через nginx ----
 FROM nginx:stable-alpine
 
+# Установка curl для скрипта ожидания
+RUN apk add --no-cache curl
+
 # Копируем собранные файлы
 COPY --from=builder /app/dist /usr/share/nginx/html
 
