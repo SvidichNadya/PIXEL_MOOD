@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 
 # Это ваша метаданная моделей (импортируйте свой Base)
-from app.core.database import Base  # пример, укажите свой путь
+from app.models.base import Base
 
 config = context.config
 fileConfig(config.config_file_name)
