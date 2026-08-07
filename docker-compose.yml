@@ -39,7 +39,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    # image: mood-backend:latest   # ← УДАЛИТЬ
     container_name: mood-backend
     restart: unless-stopped
     environment:
@@ -58,11 +57,6 @@ services:
       - mood-network
     ports:
       - "8000:8000"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
 
   frontend:
     build:
@@ -70,14 +64,13 @@ services:
       dockerfile: Dockerfile
       args:
         NPM_CONFIG_REGISTRY: https://registry.npmmirror.com
-    # image: mood-frontend:latest   # ← УДАЛИТЬ
     container_name: mood-frontend
     restart: unless-stopped
     environment:
-      VITE_API_BASE: ${VITE_API_BASE:-http://backend:8000}
+      VITE_API_BASE: ${VITE_API_BASE:-/api}
+      BACKEND_URL: ${BACKEND_URL:-backend:8000}
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
     networks:
       - mood-network
     ports:
