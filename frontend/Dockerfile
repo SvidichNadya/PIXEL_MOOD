@@ -29,4 +29,9 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+# Копируем скрипт ожидания
+COPY wait-for-backend.sh /wait-for-backend.sh
+RUN chmod +x /wait-for-backend.sh
+
+# Запускаем скрипт вместо прямого запуска nginx
+CMD ["/wait-for-backend.sh"]
