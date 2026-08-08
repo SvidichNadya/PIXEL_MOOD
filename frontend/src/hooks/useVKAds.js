@@ -1,62 +1,82 @@
 // frontend/src/hooks/useVKAds.js
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import bridge from '@vkontakte/vk-bridge';
 
-/**
- * Хук для управления баннерной рекламой в VK Mini Apps.
- * @param {string} position - 'top' или 'bottom' (по умолчанию 'bottom')
- * @param {string} heightType - 'regular' или 'compact' (по умолчанию 'regular')
- */
-export const useVKAds = (position = 'bottom', heightType = 'regular') => {
-  const [isAdLoaded, setIsAdLoaded] = useState(false);
-  const [isAdShown, setIsAdShown] = useState(false);
-  const [error, setError] = useState(null);
-  const containerRef = useRef(null);
+export const useVKAds = () => {
+  const [isAdVisible, setIsAdVisible] = useState(false);
+  const [isBridgeReady, setIsBridgeReady] = useState(false);
 
   useEffect(() => {
-    // Проверяем, что мы находимся внутри VK Mini App
-    if (typeof bridge === 'undefined') {
-      console.warn('VK Bridge is not available. Are you inside a VK Mini App?');
-      return;
+    // Инициализация VK Bridge
+    const initBridge = async () => {
+      try {
+        await bridge.send('VKWebAppInit');
+        setIsBridgeReady(true);
+      } catch (error) {
+        console.warn('VK Bridge not available:', error);
+        setIsBridgeReady(false);
+      }
+    };
+
+    initBridge();
+  }, []);
+
+  /**
+   * Показать баннерную рекламу
+   * @param {string} placementId - ID рекламного блока (из рекламного кабинета VK)
+   */
+  const showBannerAd = async (placementId) => {
+    if (!isBridgeReady) {
+      console.warn('VK Bridge not ready');
+      return false;
     }
 
-    const showBanner = async () => {
-      try {
-        // Показываем баннерную рекламу
-        // Документация: https://dev.vk.com/ru/bridge/VKWebAppShowBannerAd
-        const result = await bridge.send('VKWebAppShowBannerAd', {
-          banner_location: position, // 'top' или 'bottom'[reference:1]
-          height_type: heightType,   // 'regular' или 'compact'[reference:2]
-          layout_type: 'resize',     // экран уменьшится под размер баннера[reference:3]
-        });
-
-        if (result.result) {
-          console.log('Banner ad shown successfully');
-          setIsAdLoaded(true);
-          setIsAdShown(true);
-        } else {
-          console.warn('Banner ad could not be shown');
-          setIsAdLoaded(false);
-          setIsAdShown(false);
-        }
-      } catch (err) {
-        console.error('Failed to show banner ad:', err);
-        setError(err);
-        setIsAdLoaded(false);
-        setIsAdShown(false);
+    try {
+      // Проверяем поддержку метода
+      const supports = await bridge.supports('VKWebAppShowBannerAd');
+      if (!supports) {
+        console.warn('VKWebAppShowBannerAd not supported');
+        return false;
       }
-    };
 
-    showBanner();
+      // Показываем баннер
+      const result = await bridge.send('VKWebAppShowBannerAd', {
+        placement_id: placementId,
+        orientation: 'horizontal', // Горизонтальный баннер
+        height_type: 'adaptive',   // Адаптивная высота
+      });
 
-    // При размонтировании скрываем баннер
-    return () => {
-      if (typeof bridge !== 'undefined' && isAdShown) {
-        bridge.send('VKWebAppHideBannerAd', {})
-          .catch((err) => console.warn('Failed to hide banner:', err));
-      }
-    };
-  }, [position, heightType]);
+      console.log('Banner ad shown:', result);
+      setIsAdVisible(true);
+      return true;
+    } catch (error) {
+      console.error('Failed to show banner ad:', error);
+      return false;
+    }
+  };
 
-  return { containerRef, isAdLoaded, isAdShown, error };
+  /**
+   * Скрыть баннерную рекламу
+   */
+  const hideBannerAd = async () => {
+    if (!isBridgeReady) {
+      return false;
+    }
+
+    try {
+      await bridge.send('VKWebAppHideBannerAd', {});
+      setIsAdVisible(false);
+      return true;
+    } catch (error) {
+      console.error('Failed to hide banner ad:', error);
+      return false;
+    }
+  };
+
+  return {
+    showBannerAd,
+    hideBannerAd,
+    isAdVisible,
+    isBridgeReady,
+  };
 };

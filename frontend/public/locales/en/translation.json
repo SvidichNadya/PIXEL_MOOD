@@ -176,5 +176,8 @@
   },
   "register": {
     "consent_text": "I accept the <1>Terms of Use</1> and <3>Privacy Policy</3>"
+  },
+  "ads": {
+    "banner_label": "Advertisement"
   }
 }
