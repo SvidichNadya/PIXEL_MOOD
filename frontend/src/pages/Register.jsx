@@ -166,7 +166,7 @@ const Register = () => {
               className="h-4 w-4 text-blue-500 focus:ring-blue-500 border-gray-300 rounded"
             />
             <label htmlFor="consent_to_reveal" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-              Я согласен, что мои пиксели могут быть раскрыты за плату
+              Я соглашаюсь с пользовательским соглашением и бработкой персональных данных
             </label>
           </div>
 

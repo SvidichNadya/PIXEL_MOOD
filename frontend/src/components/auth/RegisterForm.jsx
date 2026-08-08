@@ -148,7 +148,7 @@ const RegisterForm = () => {
           className="h-4 w-4 text-blue-500 focus:ring-blue-500 border-gray-300 rounded"
         />
         <label htmlFor="consent_to_reveal" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-          {t('auth.register.consent_to_reveal') || 'Я согласен, что мои пиксели могут быть раскрыты за плату'}
+          {t('auth.register.consent_to_reveal') || 'Я соглашаюсь с лицензионным соглашением и политикой конфиденциальности'}
         </label>
       </div>
 

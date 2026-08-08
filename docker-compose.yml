@@ -67,7 +67,7 @@ services:
     container_name: mood-backend
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mood}:${POSTGRES_PASSWORD:-moodpass}@db:5432/${POSTGRES_DB:-moodpixel}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mood}:${POSTGRES_PASSWORD:-moodpass}@db:5432/${POSTGRES_DB:-moodpixel}?sslmode=disable
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY}
       VK_APP_ID: ${VK_APP_ID}
