@@ -21,7 +21,7 @@ def get_engine():
             max_overflow=40,
             pool_pre_ping=True,
             pool_recycle=3600,
-            connect_args={"ssl": True},
+            connect_args={"ssl": False},  # <-- ОТКЛЮЧАЕМ SSL
         )
     return _engine
 
