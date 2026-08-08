@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, Trans } from 'react-i18next';
 import toast from 'react-hot-toast';
 import client from '../api/client';
 import { ENDPOINTS } from '../api/endpoints';
@@ -205,23 +205,15 @@ const Register = () => {
                 className="mt-1 h-4 w-4 text-blue-500 focus:ring-blue-500 border-gray-300 rounded"
               />
               <label htmlFor="consent_to_reveal" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                {t('register.consent_text', {
-                  defaultValue: 'Я принимаю <1>Пользовательское соглашение</1> и <3>Политику конфиденциальности</3>',
-                  components: [
-                    <button
-                      key="terms"
-                      type="button"
-                      onClick={() => setShowTermsModal(true)}
-                      className="text-blue-500 hover:underline font-medium"
-                    />,
-                    <button
-                      key="privacy"
-                      type="button"
-                      onClick={() => setShowPrivacyModal(true)}
-                      className="text-blue-500 hover:underline font-medium"
-                    />,
-                  ],
-                })}
+                <Trans
+                  i18nKey="register.consent_text"
+                  components={{
+                    1: <button type="button" onClick={() => setShowTermsModal(true)} 
+                              className="text-blue-500 hover:underline font-medium" />,
+                    3: <button type="button" onClick={() => setShowPrivacyModal(true)} 
+                              className="text-blue-500 hover:underline font-medium" />,
+                  }}
+                />
               </label>
             </div>
 
