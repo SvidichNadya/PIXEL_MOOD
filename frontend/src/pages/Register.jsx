@@ -205,15 +205,22 @@ const Register = () => {
                 className="mt-1 h-4 w-4 text-blue-500 focus:ring-blue-500 border-gray-300 rounded"
               />
               <label htmlFor="consent_to_reveal" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                <Trans
-                  i18nKey="register.consent_text"
-                  components={{
-                    1: <button type="button" onClick={() => setShowTermsModal(true)} 
-                              className="text-blue-500 hover:underline font-medium" />,
-                    3: <button type="button" onClick={() => setShowPrivacyModal(true)} 
-                              className="text-blue-500 hover:underline font-medium" />,
-                  }}
-                />
+                {t('register.consent_text_prefix', 'Я принимаю')}{' '}
+                <button
+                  type="button"
+                  onClick={() => setShowTermsModal(true)}
+                  className="text-blue-500 hover:underline font-medium"
+                >
+                  {t('register.terms_link', 'Пользовательское соглашение')}
+                </button>
+                {' '}{t('register.and', 'и')}{' '}
+                <button
+                  type="button"
+                  onClick={() => setShowPrivacyModal(true)}
+                  className="text-blue-500 hover:underline font-medium"
+                >
+                  {t('register.privacy_link', 'Политику конфиденциальности')}
+                </button>
               </label>
             </div>
 

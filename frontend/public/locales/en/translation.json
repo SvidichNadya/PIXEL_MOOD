@@ -175,7 +175,10 @@
     "accept": "I consent to the processing of personal data"
   },
   "register": {
-    "consent_text": "I accept the <1>Terms of Use</1> and <3>Privacy Policy</3>"
+    "consent_text": "I accept the <1>Terms of Use</1> and <3>Privacy Policy</3>",
+    "terms_link": "Пользовательское соглашение",
+    "and": "и",
+    "privacy_link": "Политику конфиденциальности"
   },
   "ads": {
     "banner_label": "Advertisement"
